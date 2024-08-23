@@ -1,0 +1,13 @@
+# Ignore everything
+*
+
+# Except Python files
+!*.py
+
+# Except Jupyter notebook files
+!*.ipynb
+
+# Ensure to track directories, but ignore their contents
+!*/
+
+!.gitignore
