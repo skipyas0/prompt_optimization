@@ -1,4 +1,4 @@
-from random import shuffle, random, sample, choice
+from random import shuffle, random, sample
 from math import ceil
 from __future__ import annotations
 from typing import Literal, TypeVar, Generic
@@ -6,8 +6,6 @@ from typing import Literal, TypeVar, Generic
 """
 TODO:
 Test
-Add docstrings
-Check if type hinting is done everywhere
 """
 
 """
@@ -53,9 +51,10 @@ class EvoParams():
 T = TypeVar('T')
 class Specimen():
     """
-    Bundle of traits to be evaluated and optimized via evolution in a genetic algorithm.
+    Bundle of traits to be evaluated and optimized via evolution in a evolutionary algorithm.
+    Template class - some methods need to be implemented to fit use case
     """
-    def __init__(self, traits: list[Generic[T]] | int) -> None:
+    def __init__(self, traits: list[Generic[T]] | int=1) -> None:
         if type(traits) is int:
             self._generate_traits(traits)
         else:
@@ -95,38 +94,21 @@ class Specimen():
             new._trait_crossover(ix, other)
         return new
 
-    def _trait_difference(self, trait_ix: int, other: Specimen) -> None:
+    def _trait_de_combination(self, trait_ix: int, other1: Specimen, other2: Specimen) -> None:
         """
         In-place difference of traits from this and other specimen given trait index.
         """
         raise NotImplementedError
     
-    def difference(self, other: Specimen) -> Specimen:
+    def de_combination(self, other1: Specimen, other2: Specimen) -> Specimen:
         """
         Create a new specimen representing the difference of this specimen and the other. 
         Differentiate trait-by-trait according to self._trait_difference.
         """
-        assert self.n_traits == other.n_traits
+        assert self.n_traits == other1.n_traits and self.n_traits == other2.n_traits
         new = Specimen(self.traits.copy())
         for ix in range(self.n_traits):
-            new._trait_difference(ix, other)
-        return new
-    
-    def _trait_addition(self, trait_ix: int, other: Specimen) -> None:
-        """
-        In-place addition of traits from this and other specimen given trait index.
-        """
-        raise NotImplementedError
-    
-    def addition(self, other: Specimen) -> Specimen:
-        """
-        Create a new specimen representing the addition of this specimen and the other. 
-        Add trait-by-trait according to self._trait_addition.
-        """
-        assert self.n_traits == other.n_traits
-        new = Specimen(self.traits.copy())
-        for ix in range(self.n_traits):
-            new._trait_difference(ix, other)
+            new._trait_de_combination(ix, other1, other2)
         return new
     
     def calculate_fitness(self) -> float:
@@ -137,13 +119,21 @@ class Specimen():
         return self.fitness
 
     def _fitness(self) -> float:
+        """
+        Calculate fitness score for this specimen in the given invironment
+        """
         raise NotImplementedError
     
     def _generate_traits(self) -> None:
+        """
+        To be called when a blank specimen is created to fill its traits.
+        """
         raise NotImplementedError
     
 class EvolutionaryAlgorithm():
-
+    """
+    Universal framework class for evolutionary algorithms for optimization.
+    """
     def __init__(self, params: EvoParams) -> None:
         self.population: list[Specimen] = []
         self.pop_size = self.params.initial_population_size
@@ -170,6 +160,9 @@ class EvolutionaryAlgorithm():
             self.step()
 
     def step(self) -> None:
+        """
+        One step of evolutionary optimalization.
+        """
         m = self.params.evolution_mode
         if m == 'GA':
             self.ga_step()
@@ -185,7 +178,7 @@ class EvolutionaryAlgorithm():
     
     def ga_step(self) -> None:
         """
-        One step of Genetic Algorithm
+        One step of Genetic Algorithm.
         """
         self.population = self.selection()
         
@@ -205,7 +198,7 @@ class EvolutionaryAlgorithm():
 
     def de_step(self) -> None:
         """
-        One step of Differential Evolution
+        One step of Differential Evolution.
         """
         selected_specimens = self.selection()
         
@@ -217,18 +210,19 @@ class EvolutionaryAlgorithm():
             # New offspring is Crossover(Mutate(s1 - s2) + s3)
             i1, i2, i3 = sample(lotto, 3)
             s1, s2, s3 = self.population[i1], self.population[i2], self.population[i3]
-            diff = s1.difference(s2)
-            diff.mutate(self.params.trait_mutation_percentage)
-            combination = s3.addition(diff) 
+            s1.de_combination(s2, s3)
 
             offsprings.append(
-                basic.crossover(combination))
+                basic.crossover(s1))
         self.population += offsprings
 
         # shuffle to make sure a random basic specimen is being chosen
         shuffle(self.population)
 
     def update_population_fitness(self) -> None:
+        """
+        Calculate and set new fitness scores for all specimens in the population.
+        """
         for s in self.population:
             s.calculate_fitness()
 
@@ -274,6 +268,9 @@ class EvolutionaryAlgorithm():
         return mating_pool
 
     def selection(self) -> list[Specimen]:
+        """
+        Perform given selection type to get new mating pool.
+        """
         m = self.params.selection_mode
 
         if m == 'rank':
