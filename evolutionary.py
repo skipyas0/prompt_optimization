@@ -4,6 +4,8 @@ from math import ceil
 from typing import Literal, Generic
 from specimen import Specimen, T
 
+#TODO: Change roulette selection
+
 class EvoParams(): 
     """
     Collection of parameters for evolutionary algorithm
@@ -17,11 +19,12 @@ class EvoParams():
                  trait_mutation_percentage: float=1.0,
                  max_iters: int=100,
                  evolution_mode: Literal['GA','DE']='GA',
-                 selection_mode: Literal['rank', 'roulette', 'tournament']='roulette',
+                 selection_mode: Literal['rank', 'roulette', 'tournament']='rank',
                  tournament_group_size: int=3) -> None:
         self.initial_population_size = initial_population_size
         self.population_change_rate = population_change_rate
         self.mating_pool_size = mating_pool_size
+        assert self.initial_population_size >= self.mating_pool_size
         self.specimen_trait_n = specimen_trait_n
         self.specimen_mutation_probability = specimen_mutation_probability
         self.trait_mutation_percentage = trait_mutation_percentage
@@ -52,6 +55,8 @@ class EvolutionaryAlgorithm():
         Run EvolutionaryAlgorithm to max iterations.
         """
         for i in range(self.params.max_iters):
+            for s in self.population:
+                s.generation_number = i+1
             self.step()
 
     def step(self) -> None:
@@ -80,12 +85,11 @@ class EvolutionaryAlgorithm():
         # GA crossover procedure
         lotto = range(self.params.mating_pool_size)
         offsprings = []
-        while len(self.population) < self.pop_size:
+        while len(self.population) + len(offsprings) < self.pop_size:
             i1, i2 = sample(lotto, 2)
             s1, s2 = self.population[i1], self.population[i2]
 
             res = s1.crossover(s2)
-            res.generation += 1
             offsprings.append(res)
 
         self.population += offsprings
@@ -102,14 +106,13 @@ class EvolutionaryAlgorithm():
         basic = selected_specimens[-1]
         lotto = range(self.params.mating_pool_size - 1)
         offsprings = []
-        while len(self.population) < self.pop_size:
+        while len(self.population) + len(offsprings) < self.pop_size:
             # New offspring is Crossover(Mutate(s1 - s2) + s3)
             i1, i2, i3 = sample(lotto, 3)
             s1, s2, s3 = self.population[i1], self.population[i2], self.population[i3]
             s1.de_combination(s2, s3)
 
             res = basic.crossover(s1)
-            res.generation += 1
             offsprings.append(res)
 
         self.population += offsprings

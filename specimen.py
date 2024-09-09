@@ -19,7 +19,7 @@ class Specimen():
         self.traits = traits
         self.n_traits = len(self.traits)
         self.fitness = float('-inf')
-        self.generation = 1
+        self.generation_number = 1
 
     def _trait_mutate(self, trait_ix: int) -> None:
         """
@@ -32,7 +32,9 @@ class Specimen():
         In-place mutation of specimen trait-by-trait according to self.mutate_trait.
         """
         n_to_mutate = ceil(trait_mutation_percentage * self.n_traits)
-        indices_to_mutate = shuffle(list(range(self.n_traits)))[:n_to_mutate]
+        indices_to_mutate = list(range(self.n_traits))
+        shuffle(indices_to_mutate)
+        indices_to_mutate = indices_to_mutate[:n_to_mutate]
         for ix in indices_to_mutate:
             self._trait_mutate(ix)
 

@@ -40,7 +40,7 @@ if __name__ == "__main__":
 
         def log(self) -> None:
             with open(log_file, 'a') as f:
-                f.write(f"Prompt gen: {self.generation}\n\n***\n{self.traits[0]}\n***\nResult:\n{self.result}\n\nScore: {self.fitness}\n\n######")
+                f.write(f"Prompt gen: {self.generation_number}\n\n***\n{self.traits[0]}\n***\nResult:\n{self.result}\n\nScore: {self.fitness}\n\n######")
 
         def _fitness(self) -> float:
             self.result = self.generate(self.traits[0] + task)
@@ -58,7 +58,7 @@ if __name__ == "__main__":
                 prompt = gen_handle(gen_instructions)
                 self.population.append(MyPrompt(prompt))
 
-    params = EvoParams()
+    params = EvoParams(initial_population_size=5,max_iters=10, mating_pool_size=3)
     EA = MyEA(params)
     EA.populate()
     EA.run()
