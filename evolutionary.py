@@ -1,26 +1,8 @@
+from __future__ import annotations
 from random import shuffle, random, sample
 from math import ceil
-from __future__ import annotations
-from typing import Literal, TypeVar, Generic
-
-"""
-TODO:
-Test
-"""
-
-"""
-This module includes template classses for genetic algorithms.
-Specific behaviour is achieved by custom implementation of genetic operator supporting methods.
-
-ToBeImplemented:
-Specimen._trait_mutate (GA and DE)
-Specimen._trait_crossover (GA and DE)
-Specimen._trait_difference (DE only)
-Specimen._trait_addition  (DE only)
-Specimen._fitness (GA and DE)
-Specimen._generate_traits (GA and DE)
-"""
-
+from typing import Literal, Generic
+from specimen import Specimen, T
 
 class EvoParams(): 
     """
@@ -48,115 +30,28 @@ class EvoParams():
         self.selection_mode = selection_mode
         self.tournament_group_size = tournament_group_size
 
-T = TypeVar('T')
-class Specimen():
-    """
-    Bundle of traits to be evaluated and optimized via evolution in a evolutionary algorithm.
-    Template class - some methods need to be implemented to fit use case
-    """
-    def __init__(self, traits: list[Generic[T]] | int=1) -> None:
-        if type(traits) is int:
-            self._generate_traits(traits)
-        else:
-            self.traits = traits
-        self.n_traits = len(self.traits)
-        self.fitness = float('-inf')
 
-    def _trait_mutate(self, trait_ix: int) -> None:
-        """
-        In-place mutation of trait of given number.
-        """
-        raise NotImplementedError
-    
-    def mutate(self, trait_mutation_percentage: float) -> None:
-        """
-        In-place mutation of specimen trait-by-trait according to self.mutate_trait.
-        """
-        n_to_mutate = ceil(trait_mutation_percentage * self.n_traits)
-        indices_to_mutate = shuffle(list(range(self.n_traits)))[:n_to_mutate]
-        for ix in indices_to_mutate:
-            self._trait_mutate(ix)
-
-    def _trait_crossover(self, trait_ix: int, other: Specimen) -> None:
-        """
-        In-place crossover of traits from this and other specimen given trait index.
-        """
-        raise NotImplementedError
-    
-    def crossover(self, other: Specimen) -> Specimen:
-        """
-        Create an offspring by combining this specimen's traits with other specimen 
-        trait-by-trait according to self._trait_crossover
-        """
-        assert self.n_traits == other.n_traits
-        new = Specimen(self.traits.copy())
-        for ix in range(self.n_traits):
-            new._trait_crossover(ix, other)
-        return new
-
-    def _trait_de_combination(self, trait_ix: int, other1: Specimen, other2: Specimen) -> None:
-        """
-        In-place difference of traits from this and other specimen given trait index.
-        """
-        raise NotImplementedError
-    
-    def de_combination(self, other1: Specimen, other2: Specimen) -> Specimen:
-        """
-        Create a new specimen representing the difference of this specimen and the other. 
-        Differentiate trait-by-trait according to self._trait_difference.
-        """
-        assert self.n_traits == other1.n_traits and self.n_traits == other2.n_traits
-        new = Specimen(self.traits.copy())
-        for ix in range(self.n_traits):
-            new._trait_de_combination(ix, other1, other2)
-        return new
-    
-    def calculate_fitness(self) -> float:
-        """
-        Recalculates self.fitness and returns it
-        """
-        self.fitness = self._fitness()
-        return self.fitness
-
-    def _fitness(self) -> float:
-        """
-        Calculate fitness score for this specimen in the given invironment
-        """
-        raise NotImplementedError
-    
-    def _generate_traits(self) -> None:
-        """
-        To be called when a blank specimen is created to fill its traits.
-        """
-        raise NotImplementedError
-    
 class EvolutionaryAlgorithm():
     """
     Universal framework class for evolutionary algorithms for optimization.
     """
     def __init__(self, params: EvoParams) -> None:
         self.population: list[Specimen] = []
-        self.pop_size = self.params.initial_population_size
         self.params = params
+        self.pop_size = self.params.initial_population_size
+        
 
     def populate(self, traits: list[list[Generic[T]]] | None=None) -> None:
         """
-        Generate initial population of specimens either with given traits or via Specimen._generate_traits.
+        Generate initial population of specimens.
         """
-        if traits is None:
-            for _ in range(self.params.population_size):
-                s = Specimen(self.params.specimen_trait_n)
-                self.population.append(s)
-        else:
-            for ix in range(self.params.population_size):
-                s = Specimen(traits[ix])
-                self.population.append(s)
-
+        raise NotImplementedError
+    
     def run(self) -> None:
         """
         Run EvolutionaryAlgorithm to max iterations.
         """
-        for _ in range(self.params.max_iters):
+        for i in range(self.params.max_iters):
             self.step()
 
     def step(self) -> None:
@@ -188,9 +83,10 @@ class EvolutionaryAlgorithm():
         while len(self.population) < self.pop_size:
             i1, i2 = sample(lotto, 2)
             s1, s2 = self.population[i1], self.population[i2]
-            offsprings.append(
-                s1.crossover(s2)
-            )
+
+            res = s1.crossover(s2)
+            res.generation += 1
+            offsprings.append(res)
 
         self.population += offsprings
 
@@ -212,8 +108,10 @@ class EvolutionaryAlgorithm():
             s1, s2, s3 = self.population[i1], self.population[i2], self.population[i3]
             s1.de_combination(s2, s3)
 
-            offsprings.append(
-                basic.crossover(s1))
+            res = basic.crossover(s1)
+            res.generation += 1
+            offsprings.append(res)
+
         self.population += offsprings
 
         # shuffle to make sure a random basic specimen is being chosen
@@ -291,8 +189,3 @@ class EvolutionaryAlgorithm():
                 specimen.mutate(
                     self.params.trait_mutation_percentage)
                 
-    
-                
-    
-        
-    
