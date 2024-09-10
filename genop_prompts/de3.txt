@@ -10,3 +10,5 @@ End of Sequence 1
 Sequence 2
 {}
 End of Sequence 2
+
+Resulting Sequence:

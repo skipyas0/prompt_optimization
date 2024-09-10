@@ -1,5 +1,5 @@
 Below you will find two sequences. 
-Your task is to identify important aspects of both sentences and then combine them, so that the resulting sequence captures the meaning of both sentences.
+Your task is to identify important aspects of both sequences and then combine them so that the resulting sequence captures the meaning of both sequence.
 
 Sequence 1:
 {}
@@ -8,3 +8,5 @@ End of Sequence 1
 Sequence 2:
 {}
 End of Sequence 2
+
+Resulting Sequence:

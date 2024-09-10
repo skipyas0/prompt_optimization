@@ -5,3 +5,5 @@ Output them as a list of comma-seperated values.
 Sequence 1:
 {}
 End of Sequence 1
+
+Resulting Sequence:

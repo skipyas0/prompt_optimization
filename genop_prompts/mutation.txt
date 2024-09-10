@@ -1,7 +1,9 @@
 Below you will find a sequence. 
-Your task is to mutate it - change it eg.: by through choosing fitting synonyms.
+Your task is to mutate it - change it, for example by choosing fitting synonyms.
 Conserve the original meaning.
 
 Sequence
 {}
 End of Sequence
+
+Resulting Sequence:

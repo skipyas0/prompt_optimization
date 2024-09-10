@@ -33,3 +33,5 @@ Kamala Harris, Donald Trump, Reuters, Ipsos, Democratic, Vice President Harris, 
 </example>
 
 </examples>
+
+Resulting Sequence:
