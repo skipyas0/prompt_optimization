@@ -3,7 +3,7 @@ from random import shuffle, random, sample
 from math import ceil
 from typing import Literal, Generic
 from specimen import Specimen, T
-
+import torch
 #TODO: Change roulette selection
 
 class EvoParams(): 
@@ -147,9 +147,11 @@ class EvolutionaryAlgorithm():
         """
         
         self.update_population_fitness()
+        sm_scores = torch.softmax(torch.tensor([s.fitness for s in self.population]))
+        counts = (10 * sm_scores / sm_scores.min()).ceil().tolist()
 
         mating_pool = sample(self.population, self.pop_size - self.params.mating_pool_size,
-                             counts=[ceil(s.fitness) for s in self.population])
+                             counts=counts)
         
         return mating_pool
 

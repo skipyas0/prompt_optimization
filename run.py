@@ -1,4 +1,3 @@
-from typing import Callable, Generic
 from evolutionary import EvolutionaryAlgorithm, EvoParams
 from evaluators import simple_list_intersection
 from evoprompt import Prompt
