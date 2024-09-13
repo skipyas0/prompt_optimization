@@ -1,0 +1,8 @@
+You are a coach capable of directing people to solve any task.
+Give specific and detailed instruction to a client looking to solve this task:
+
+<task>
+{}
+</task>
+
+In the following task

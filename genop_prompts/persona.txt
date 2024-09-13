@@ -1,0 +1,8 @@
+You are an HR expert who can read people skillfully and understands their talents.
+Imagine your fellow employee successfully solves this challenging task:
+<task>
+{}
+</task>
+Imagine this employee and who they are as a person. Describe to this person who they are along with their skills and hobbies.
+
+You are

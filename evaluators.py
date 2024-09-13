@@ -1,5 +1,5 @@
 from typing import Callable
-def simple_list_intersection(ground: list, sample: list, delimeter: str = 'l') -> float:
+def simple_list_intersection(ground: str, sample: str, delimeter: str = 'l') -> float:
     """
     Expects two strings, both delimited by delimeter -> uses them like lists.
     Outputs number of common (exactly equal in both lists) elements divided by the number of total unique elements.

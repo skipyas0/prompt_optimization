@@ -8,7 +8,7 @@ def mutate(prompt: Prompt, mutation_handle: Callable[[list[str]], str]) -> None:
     In-place mutation of prompt trait-by-trait according to self.mutate_trait.
     """
     for ix, trait in enumerate(prompt.traits):
-        prompt[ix] = mutation_handle[[trait]]
+        prompt.traits[ix] = mutation_handle([trait])
 
 
 def crossover(
@@ -21,8 +21,8 @@ def crossover(
 
     prompt1 = prompt1.copy()
     for ix in range(prompt1.n_traits):
-        t1, t2 = prompt1[ix], prompt2[ix]
-        prompt1[ix] = crossover_handle([t1, t2])
+        t1, t2 = prompt1.traits[ix], prompt2.traits[ix]
+        prompt1.traits[ix] = crossover_handle([t1, t2])
 
     return prompt1
 
@@ -43,7 +43,7 @@ def de_combination(
     assert p1.n_traits == p2.n_traits and p1.n_traits == p3.n_traits
 
     for ix in range(p1.n_traits):
-        t1, t2, t3 = p1[ix], p2[ix], p3[ix]
+        t1, t2, t3 = p1.traits[ix], p2.traits[ix], p3.traits[ix]
 
         diffs = de1([t1, t2])
 

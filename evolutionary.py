@@ -1,8 +1,8 @@
 from __future__ import annotations
 from random import shuffle, random, sample
 from typing import Literal, Callable
-from prompt import Prompt
-import selection_mechanisms as sm
+from prompt import Prompt, PromptParams
+
 import genetic_operators as op
 import os
 
@@ -20,7 +20,8 @@ class EvoParams():
                  max_iters: int=100,
                  evolution_mode: Literal['GA','DE']='GA',
                  selection_mode: Literal['rank', 'roulette', 'tournament']='rank',
-                 tournament_group_size: int=3)-> None:
+                 tournament_group_size: int=3,
+                 log: bool = True)-> None:
         self.initial_population_size = initial_population_size
         self.population_change_rate = population_change_rate
         self.mating_pool_size = mating_pool_size
@@ -32,18 +33,22 @@ class EvoParams():
         self.evolution_mode = evolution_mode
         self.selection_mode = selection_mode
         self.tournament_group_size = tournament_group_size
+        self.log=log
+
+import selection_mechanisms as sm
 
 class EvolutionaryAlgorithm():
     """
     Class for prompt optimalization using evolutionary algorithms.
     """
 
-    def __init__(self, params: EvoParams, generation_handle: Callable[[str], str]) -> None:
+    def __init__(self, params: EvoParams, generation_handle: Callable[[str], str], task: str) -> None:
         self.population: list[Prompt] = []
         self.params = params
         self.pop_size = self.params.initial_population_size
         self.task_specific_handles: dict[str, Callable[[list[str]], str]] = dict()
         self.gen = generation_handle
+        self.task = task
         self.load_instructions()
 
         self.step = self.ga_step if self.params.evolution_mode=='GA' else self.de_step
@@ -52,11 +57,20 @@ class EvolutionaryAlgorithm():
         """
         Run EvolutionaryAlgorithm to max iterations.
         """
-        for i in range(self.params.max_iters):
-            for s in self.population:
-                s.generation_number = i+1
+        for _ in range(self.params.max_iters):
             self.step()
-    
+
+    def populate(self, prompt_params: PromptParams) -> None:
+        for _ in range(self.params.initial_population_size):
+            traits = [
+                self.task_specific_handles["persona"]([self.task]),
+                self.task_specific_handles["instructions"]([self.task]),
+                self.task_specific_handles["generation_start"]([self.task])
+            ]
+            new = Prompt(traits, prompt_params)
+            self.population.append(new)
+
+
     def ga_step(self) -> None:
         """
         One step of Genetic Algorithm.
@@ -71,6 +85,7 @@ class EvolutionaryAlgorithm():
             s1, s2 = self.population[i1], self.population[i2]
 
             res = op.crossover(s1, s2, self.task_specific_handles['crossover'])
+            res.generation_number += 1
             offsprings.append(res)
 
         self.population += offsprings
@@ -98,7 +113,7 @@ class EvolutionaryAlgorithm():
 
             res1 = op.de_combination(prompts, handles)
             res2 = op.crossover(res1, basic)
-
+            res2.generation_number += 1
             offsprings.append(res2)
 
         self.population += offsprings
@@ -114,15 +129,17 @@ class EvolutionaryAlgorithm():
         """
         for s in self.population:
             s.calculate_fitness()
+            if self.params.log:
+                s.log()
 
         m = self.params.selection_mode
 
         if m == 'rank':
-            return sm.rank_selection(self.population)
+            return sm.rank_selection(self.population, self.params)
         elif m == 'roulette':
-            return sm.roulette_selection(self.population)
+            return sm.roulette_selection(self.population, self.params)
         else:
-            return sm.tournament_selection(self.population)
+            return sm.tournament_selection(self.population, self.params)
     
     def mutate_group(self, to_be_mutated: list[Prompt]) -> None:
         """
@@ -130,7 +147,7 @@ class EvolutionaryAlgorithm():
         """
         for prompt in to_be_mutated:
             if random() < self.params.prompt_mutation_probability:
-                op.mutate(prompt)
+                op.mutate(prompt, self.task_specific_handles['mutation'])
                 
     def load_instructions(self) -> None:
         """

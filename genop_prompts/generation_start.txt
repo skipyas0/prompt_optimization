@@ -1,0 +1,4 @@
+How would someone mindful with strong logical thinking start to solve this task?
+<task>
+{}
+</task>
