@@ -29,7 +29,8 @@ def ask_llm_to_compare(ground: str, sample: str, gen_handle: Callable[[str], str
 
     ans = gen_handle(prompt).strip()
     if ans not in rating_scale:
-        raise AssertionError("LLM Evaluator answer not part of the scale")
+        print(f"WARNING: LLM Evaluator answer {ans} not part of the scale.")
+        return 0.0
     
     return 0.25*rating_scale.index(ans)
 

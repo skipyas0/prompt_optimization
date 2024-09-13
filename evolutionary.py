@@ -1,10 +1,10 @@
 from __future__ import annotations
 from random import shuffle, random, sample
-from math import ceil
-from typing import Literal, Generic
-from specimen import Specimen, T
-import torch
-#TODO: Change roulette selection
+from typing import Literal, Callable
+from prompt import Prompt
+import selection_mechanisms as sm
+import genetic_operators as op
+import os
 
 class EvoParams(): 
     """
@@ -14,42 +14,40 @@ class EvoParams():
                  initial_population_size: int=20,
                  population_change_rate: int=0,
                  mating_pool_size: int=10,
-                 specimen_trait_n: int=1,
-                 specimen_mutation_probability: float=0.2,
+                 prompt_trait_n: int=1,
+                 prompt_mutation_probability: float=0.2,
                  trait_mutation_percentage: float=1.0,
                  max_iters: int=100,
                  evolution_mode: Literal['GA','DE']='GA',
                  selection_mode: Literal['rank', 'roulette', 'tournament']='rank',
-                 tournament_group_size: int=3) -> None:
+                 tournament_group_size: int=3)-> None:
         self.initial_population_size = initial_population_size
         self.population_change_rate = population_change_rate
         self.mating_pool_size = mating_pool_size
         assert self.initial_population_size >= self.mating_pool_size
-        self.specimen_trait_n = specimen_trait_n
-        self.specimen_mutation_probability = specimen_mutation_probability
+        self.prompt_trait_n = prompt_trait_n
+        self.prompt_mutation_probability = prompt_mutation_probability
         self.trait_mutation_percentage = trait_mutation_percentage
         self.max_iters = max_iters
         self.evolution_mode = evolution_mode
         self.selection_mode = selection_mode
         self.tournament_group_size = tournament_group_size
 
-
 class EvolutionaryAlgorithm():
     """
-    Universal framework class for evolutionary algorithms for optimization.
+    Class for prompt optimalization using evolutionary algorithms.
     """
-    def __init__(self, params: EvoParams) -> None:
-        self.population: list[Specimen] = []
+
+    def __init__(self, params: EvoParams, generation_handle: Callable[[str], str]) -> None:
+        self.population: list[Prompt] = []
         self.params = params
         self.pop_size = self.params.initial_population_size
-        
+        self.task_specific_handles: dict[str, Callable[[list[str]], str]] = dict()
+        self.gen = generation_handle
+        self.load_instructions()
 
-    def populate(self, traits: list[list[Generic[T]]] | None=None) -> None:
-        """
-        Generate initial population of specimens.
-        """
-        raise NotImplementedError
-    
+        self.step = self.ga_step if self.params.evolution_mode=='GA' else self.de_step
+
     def run(self) -> None:
         """
         Run EvolutionaryAlgorithm to max iterations.
@@ -58,23 +56,6 @@ class EvolutionaryAlgorithm():
             for s in self.population:
                 s.generation_number = i+1
             self.step()
-
-    def step(self) -> None:
-        """
-        One step of evolutionary optimalization.
-        """
-        m = self.params.evolution_mode
-        if m == 'GA':
-            self.ga_step()
-        elif m == 'DE':
-            self.de_step()
-        else:
-            raise NotImplementedError("Unknown evolution mode")
-        
-        # Change pop size according to params but not below mating pool size
-        self.pop_size = max(self.params.mating_pool_size,
-                            self.pop_size + self.params.population_change_rate)
-
     
     def ga_step(self) -> None:
         """
@@ -89,108 +70,81 @@ class EvolutionaryAlgorithm():
             i1, i2 = sample(lotto, 2)
             s1, s2 = self.population[i1], self.population[i2]
 
-            res = s1.crossover(s2)
+            res = op.crossover(s1, s2, self.task_specific_handles['crossover'])
             offsprings.append(res)
 
         self.population += offsprings
 
         self.mutate_group(self.population)
 
+        self.pop_size = max(self.params.mating_pool_size,
+                            self.pop_size + self.params.population_change_rate)
+
     def de_step(self) -> None:
         """
         One step of Differential Evolution.
         """
-        selected_specimens = self.selection()
+        selected_prompts = self.selection()
         
         # DE crossover procedure
-        basic = selected_specimens[-1]
+        basic = selected_prompts[-1]
         lotto = range(self.params.mating_pool_size - 1)
         offsprings = []
         while len(self.population) + len(offsprings) < self.pop_size:
-            # New offspring is Crossover(Mutate(s1 - s2) + s3)
+            # New offspring is Crossover(Mutate(s1 - s2) + s3, basic)
             i1, i2, i3 = sample(lotto, 3)
-            s1, s2, s3 = self.population[i1], self.population[i2], self.population[i3]
-            s1.de_combination(s2, s3)
+            prompts = (self.population[i1], self.population[i2], self.population[i3])
+            handles = tuple(self.task_specific_handles[s] for s in ['de1', 'de2', 'de3'])
 
-            res = basic.crossover(s1)
-            offsprings.append(res)
+            res1 = op.de_combination(prompts, handles)
+            res2 = op.crossover(res1, basic)
+
+            offsprings.append(res2)
 
         self.population += offsprings
 
-        # shuffle to make sure a random basic specimen is being chosen
+        # shuffle to make sure a random basic prompt is being chosen
         shuffle(self.population)
+        self.pop_size = max(self.params.mating_pool_size,
+                            self.pop_size + self.params.population_change_rate)
 
-    def update_population_fitness(self) -> None:
+    def selection(self) -> list[Prompt]:
         """
-        Calculate and set new fitness scores for all specimens in the population.
+        Perform given selection type to get new mating pool.
         """
         for s in self.population:
             s.calculate_fitness()
 
-    def rank_selection(self) -> list[Specimen]:
-        """
-        Individuals are ranked based on their fitness, and selection is done based on rank.
-        """
-        self.update_population_fitness()
-
-        mating_pool = sorted(self.population, 
-                     key=lambda s: s.fitness, 
-                     reverse=True)[:self.params.mating_pool_size]
-        
-        return mating_pool
-        
-    
-    def roulette_selection(self) -> list[Specimen]:
-        """
-        Individuals are selected with a probability proportional to their fitness. 
-        The better the fitness, the higher the probability of being selected.
-        """
-        
-        self.update_population_fitness()
-        sm_scores = torch.softmax(torch.tensor([s.fitness for s in self.population]))
-        counts = (10 * sm_scores / sm_scores.min()).ceil().tolist()
-
-        mating_pool = sample(self.population, self.pop_size - self.params.mating_pool_size,
-                             counts=counts)
-        
-        return mating_pool
-
-    def tournament_selection(self) -> list[Specimen]:
-        """
-        A group of individuals (a tournament) is randomly chosen from the population. 
-        The best individual in this group is selected. 
-        This is repeated until the desired number of individuals is chosen.
-        """
-        self.update_population_fitness()
-
-        mating_pool = []
-        for _ in range(self.params.mating_pool_size):
-            group = sample(self.population, self.params.tournament_group_size)
-            group_winner = max(group, key=lambda s: s.fitness)
-            mating_pool.append(group_winner)
-        return mating_pool
-
-    def selection(self) -> list[Specimen]:
-        """
-        Perform given selection type to get new mating pool.
-        """
         m = self.params.selection_mode
 
         if m == 'rank':
-            return self.rank_selection()
+            return sm.rank_selection(self.population)
         elif m == 'roulette':
-            return self.roulette_selection()
-        elif m == 'tournament':
-            return self.tournament_selection()
-        
-        raise NotImplementedError("Unknown selection mode")
+            return sm.roulette_selection(self.population)
+        else:
+            return sm.tournament_selection(self.population)
     
-    def mutate_group(self, to_be_mutated: list[Specimen]) -> None:
+    def mutate_group(self, to_be_mutated: list[Prompt]) -> None:
         """
-        In-place mutation of given specimens according to mutation probability params.
+        In-place mutation of given prompts according to mutation probability params.
         """
-        for specimen in to_be_mutated:
-            if random() < self.params.specimen_mutation_probability:
-                specimen.mutate(
-                    self.params.trait_mutation_percentage)
+        for prompt in to_be_mutated:
+            if random() < self.params.prompt_mutation_probability:
+                op.mutate(prompt)
                 
+    def load_instructions(self) -> None:
+        """
+        Access prewritten instructions to be used in genetic operators.
+        """
+        curr_path = os.getcwd()
+        path = curr_path + '/genop_prompts/'
+        for fn in os.listdir(path):
+            op_name = fn.split('.')[0]
+            with open(path + fn, 'r') as file:
+                instructions = file.read()
+
+                # Store a handle to be used with 1 or 2 prompt-traits
+                # Unpack them and format them into the instruction template
+                self.task_specific_handles[op_name] = lambda s: self.gen(instructions.format(*s))
+
+        assert len(self.task_specific_handles.keys()) == len(os.listdir(path))
