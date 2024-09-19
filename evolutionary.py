@@ -2,7 +2,7 @@ from __future__ import annotations
 from random import shuffle, random, sample
 from typing import Literal, Callable
 from prompt import Prompt, PromptParams
-
+from datasets import Dataset
 import genetic_operators as op
 import os
 
@@ -15,12 +15,13 @@ class EvoParams():
                  population_change_rate: int=0,
                  mating_pool_size: int=10,
                  prompt_trait_n: int=1,
-                 prompt_mutation_probability: float=0.2,
+                 prompt_mutation_probability: float=1.0,
                  trait_mutation_percentage: float=1.0,
                  max_iters: int=100,
                  evolution_mode: Literal['GA','DE']='GA',
                  selection_mode: Literal['rank', 'roulette', 'tournament']='rank',
                  tournament_group_size: int=3,
+                 train_batch_size: int=5,
                  log: bool = True)-> None:
         self.initial_population_size = initial_population_size
         self.population_change_rate = population_change_rate
@@ -33,6 +34,7 @@ class EvoParams():
         self.evolution_mode = evolution_mode
         self.selection_mode = selection_mode
         self.tournament_group_size = tournament_group_size
+        self.train_batch_size = train_batch_size
         self.log=log
 
 import selection_mechanisms as sm
@@ -42,13 +44,13 @@ class EvolutionaryAlgorithm():
     Class for prompt optimalization using evolutionary algorithms.
     """
 
-    def __init__(self, params: EvoParams, generation_handle: Callable[[str], str], task: str) -> None:
+    def __init__(self, params: EvoParams, generation_handle: Callable[[str, int], str], tasks: Dataset) -> None:
         self.population: list[Prompt] = []
         self.params = params
         self.pop_size = self.params.initial_population_size
         self.task_specific_handles: dict[str, Callable[[list[str]], str]] = dict()
-        self.gen = generation_handle
-        self.task = task
+        self.gen = generation_handle # func with prompt and max_tokens as args
+        self.tasks = tasks
         self.load_instructions()
 
         self.step = self.ga_step if self.params.evolution_mode=='GA' else self.de_step
@@ -60,13 +62,12 @@ class EvolutionaryAlgorithm():
         for _ in range(self.params.max_iters):
             self.step()
 
-    def populate(self, prompt_params: PromptParams) -> None:
+    def populate(self, prompt_params: PromptParams, trait_ids: list[str], infer_task_samples: str) -> None:
         for _ in range(self.params.initial_population_size):
-            traits = [
-                self.task_specific_handles["persona"]([self.task]),
-                self.task_specific_handles["instructions"]([self.task]),
-                self.task_specific_handles["generation_start"]([self.task])
-            ]
+            traits = []
+            for tr in trait_ids:
+                traits.append(self.task_specific_handles[tr]([infer_task_samples]))
+            
             new = Prompt(traits, prompt_params)
             self.population.append(new)
 
@@ -100,7 +101,8 @@ class EvolutionaryAlgorithm():
         One step of Differential Evolution.
         """
         selected_prompts = self.selection()
-        
+
+        handles = tuple(self.task_specific_handles[s] for s in ['de1', 'de2', 'de3'])
         # DE crossover procedure
         basic = selected_prompts[-1]
         lotto = range(self.params.mating_pool_size - 1)
@@ -109,8 +111,6 @@ class EvolutionaryAlgorithm():
             # New offspring is Crossover(Mutate(s1 - s2) + s3, basic)
             i1, i2, i3 = sample(lotto, 3)
             prompts = (self.population[i1], self.population[i2], self.population[i3])
-            handles = tuple(self.task_specific_handles[s] for s in ['de1', 'de2', 'de3'])
-
             res1 = op.de_combination(prompts, handles)
             res2 = op.crossover(res1, basic)
             res2.generation_number += 1
@@ -127,8 +127,11 @@ class EvolutionaryAlgorithm():
         """
         Perform given selection type to get new mating pool.
         """
+        task_batch_ix = sample(range(len(self.tasks)), self.params.train_batch_size)
+        task_batch = self.tasks.select(task_batch_ix)
+        
         for s in self.population:
-            s.calculate_fitness()
+            s.calculate_fitness(task_batch)
             if self.params.log:
                 s.log()
 
@@ -162,6 +165,7 @@ class EvolutionaryAlgorithm():
 
                 # Store a handle to be used with 1 or 2 prompt-traits
                 # Unpack them and format them into the instruction template
-                self.task_specific_handles[op_name] = lambda s: self.gen(instructions.format(*s))
+                tok = 10 if op_name == "generation_start" else 10000
+                self.task_specific_handles[op_name] = lambda s: self.gen(instructions.format(*s), tok)
 
         assert len(self.task_specific_handles.keys()) == len(os.listdir(path))

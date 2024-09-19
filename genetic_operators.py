@@ -19,12 +19,14 @@ def crossover(
     """
     assert prompt1.n_traits == prompt2.n_traits
 
-    prompt1 = prompt1.copy()
-    for ix in range(prompt1.n_traits):
-        t1, t2 = prompt1.traits[ix], prompt2.traits[ix]
-        prompt1.traits[ix] = crossover_handle([t1, t2])
+    id1 = prompt1.id
+    res = prompt1.copy()
+    for ix in range(res.n_traits):
+        t1, t2 = res.traits[ix], prompt2.traits[ix]
+        res.traits[ix] = crossover_handle([t1, t2])
 
-    return prompt1
+    res.parent_ids = [id1, prompt2.id]
+    return res
 
 
 def de_combination(
@@ -37,18 +39,19 @@ def de_combination(
 ):
     
     p1, p2, p3 = prompts
-    p1 = p1.copy()
+    res = p1.copy()
 
     de1, de2, de3 = handles
-    assert p1.n_traits == p2.n_traits and p1.n_traits == p3.n_traits
+    assert res.n_traits == p2.n_traits and res.n_traits == p3.n_traits
 
-    for ix in range(p1.n_traits):
-        t1, t2, t3 = p1.traits[ix], p2.traits[ix], p3.traits[ix]
+    for ix in range(res.n_traits):
+        t1, t2, t3 = res.traits[ix], p2.traits[ix], p3.traits[ix]
 
         diffs = de1([t1, t2])
 
         mutated = de2([diffs])
 
-        p1.traits[ix] = de3([mutated, t3])
-
-    return p1
+        res.traits[ix] = de3([mutated, t3])
+    
+    res.parent_ids = [p1.id, p2.id, p3.id]
+    return res

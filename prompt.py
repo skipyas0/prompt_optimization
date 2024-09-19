@@ -1,8 +1,11 @@
 from __future__ import annotations
 from typing import Callable
+from random import randint
+from datasets import Dataset
+import json
 
 class PromptParams():
-    def __init__(self, usage_handle: Callable[[list[str]], str], evalutation_handle: Callable[[str], float], log_file: str, task_insert_index: int) -> None:
+    def __init__(self, usage_handle: Callable[[str], str], evalutation_handle: Callable[[str, str], float], log_file: str, task_insert_index: int) -> None:
         self.usage_handle = usage_handle
         self.evaluation_handle = evalutation_handle
         self.log_file = log_file
@@ -14,16 +17,25 @@ class Prompt():
         self.traits = traits
         self.n_traits = len(self.traits)
         self.fitness = float('-inf')
+        self.best_fitness = float('-inf')
         self.generation_number = 1
-        self.result = ""
+        self.result = ["",""]
+        self.id = randint(10000000, 99999999)
+        self.parent_ids = []
 
     def __str__(self) -> str:
         ix = self.params.task_insert_index
         return '\n'.join(self.traits[:ix]) + '\n<task>\n{}\n</task>\n' + '\n'.join(self.traits[ix:]) 
 
-    def calculate_fitness(self) -> float:
-        self.result = self.params.usage_handle(str(self))
-        self.fitness = self.params.evaluation_handle(self.result)
+    def calculate_fitness(self, batch: Dataset) -> float:
+        """
+        Evalute mean performance over batch of tasks
+        """
+        results = [self.params.usage_handle(str(self).format(task['question'])) for task in batch]
+        ground_truths = [task['answer'] for task in batch]
+        fitness_scores = [self.params.evaluation_handle(ground, gen) for ground, gen in zip(results, ground_truths)]
+        self.best_fitness, self.result = max(zip(fitness_scores, results)) # save result with best performance on 
+        self.fitness = sum(fitness_scores) / len(fitness_scores)
         return self.fitness
 
     def copy(self) -> Prompt:
@@ -32,5 +44,15 @@ class Prompt():
         return new
     
     def log(self) -> None:
+        log_entry = {
+            'id': self.id,
+            'parent_ids': self.parent_ids,
+            'generation': self.generation_number,
+            'traits': self.traits,
+            'avg_fitness': self.fitness,
+            'best_task_result': self.result,
+            'best_fitness': self.best_fitness
+        }
         with open(self.params.log_file, 'a') as f:
-            f.write(f"Prompt gen: {self.generation_number}\n\n***\n{str(self)}\n***\nResult:\n{self.result}\n\nScore: {self.fitness}\n\n######")
+            f.write(json.dumps(log_entry) + '\n')
+            #f.write(f"Prompt gen: {self.generation_number}\n\n***\n{str(self)}\n***\nTask with best result:\n{self.result[0]}\nResult:\n{self.result[1]}\n\nScore: {self.fitness}\n\n######")

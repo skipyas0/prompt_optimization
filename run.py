@@ -1,51 +1,49 @@
 from evolutionary import EvolutionaryAlgorithm, EvoParams
 import evaluators as eval
-from prompt import Prompt, PromptParams
+from prompt import PromptParams
 from vllm_api import OpenAIPredictor
 from datetime import datetime
-
 from os import getenv
+import utils
 
 if __name__ == "__main__":
-    task_category = "entity_extraction"
-    rel_path = f"tasks/{task_category}/"
-    task_name = "german-intelligence-says-russian-gru-group-behind-nato-eu-cyberattacks-2024-09-09"
+    ds_name = "microsoft/orca-math-word-problems-200k"
+    split = [4,100,30]
+    infer, train, test = utils.load_splits(ds_name, split)
+    print("Dataset loaded:",ds_name)
 
-    with open(f"{rel_path}/generation.txt") as f:
-        gen_instructions = f.read()
-    with open(f"{rel_path}/samples/x/{task_name}.txt") as f:
-        task = f.read()
-    with open(f"{rel_path}/samples/y/{task_name}.txt") as f:
-        ground = f.read()
-
-    model = "hugging-quants/Meta-Llama-3.1-70B-Instruct-AWQ-INT4"
-    #model = "mistralai/Mistral-7B-v0.3"
-    #api = OpenAIPredictor(model)
-    prelude = [{"role": "system", "content": "You are a helpful assistant. You follow instructions and answer concisely."}]
-    #gen_handle = lambda x: api.predict(prelude, x)
-
-    score = lambda x: eval.simple_list_intersection(ground, x)
+    examples = utils.join_dataset_to_str(infer)
 
     
+    model = "hugging-quants/Meta-Llama-3.1-70B-Instruct-AWQ-INT4"
+    api = OpenAIPredictor(model)
+    gen_handle_variable_length = lambda prompt, tok: api.predict(question=prompt, tok=tok)
+
+    # TODO: Rethink how prompts access generation mainly during evaluation 
+    # Now it can only optimize over one task! 
+    usage_handle = lambda prompt: api.predict(question=prompt)
+    score = lambda ground, x: eval.ask_llm_to_compare(ground, x, usage_handle)
+
+    """
     #fast debug to replace LLM calls
     import random 
-    gen_instructions = "Hello world! This is a testy test."
-    task = "Generic task :O. What could it be?"
     def scramble(input: str) -> str:
         char_list = list(input)
         random.shuffle(char_list)
         return ''.join(char_list)
     gen_handle = scramble
     score = lambda _: random.random()
-    
+    """
 
     ident = getenv("SLURM_JOB_ID") or datetime.now().strftime('%H-%M-%S_%d-%m-%Y')
-    log_file = f"logs/results/{task_category}_{ident}.txt"
+    log_file = f"logs/results/{ident}.ndjson"
 
-    # prompt has three traits - persona (0), task introduction (1) <insert task here>, generation start sequence (2)
-    insert_ix = 2
-    prompt_params = PromptParams(gen_handle, score, log_file, insert_ix)
-    params = EvoParams(initial_population_size=5,max_iters=10, mating_pool_size=3)
-    EA = EvolutionaryAlgorithm(params, gen_handle, task)
-    EA.populate(prompt_params)
+    # Specify parts of the evolved prompt and where to insert task
+    trait_ids = ["instructions"]
+    insert_ix = 1
+
+    prompt_params = PromptParams(usage_handle, score, log_file, insert_ix)
+    params = EvoParams(initial_population_size=10, max_iters=20, mating_pool_size=6)
+    EA = EvolutionaryAlgorithm(params, gen_handle_variable_length, train)
+    EA.populate(prompt_params, trait_ids, examples)
     EA.run()

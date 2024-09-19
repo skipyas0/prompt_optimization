@@ -12,17 +12,21 @@ class OpenAIPredictor:
             api_key="EMPTY",
         )
 
-    def forward(self, messages, temperature, n):
+    def forward(self, messages, temperature, n, tok):
         completion = self.client.chat.completions.create(
             model=self.model,
             messages=messages,
             temperature=temperature,
             n=n,
-            frequency_penalty=0.1
+            frequency_penalty=0.1,
+            max_tokens=tok
         )
         return completion
     
-    def predict(self, messages, question=None, n=1, temperature=0.0):
+    def predict(self, messages=None, question=None, n=1, temperature=0.0, tok=10000):
+        if messages is None:
+            messages = [{"role": "system", "content": "You are a helpful assistant. You follow instructions and answer concisely."}]
+            
         if question:
             msgs = messages + [{"role": "user", "content": question}]
         else:
@@ -33,6 +37,7 @@ class OpenAIPredictor:
                 messages=msgs,
                 temperature=temperature,
                 n=n,
+                tok=tok
             )
 
         except openai.BadRequestError as e:
