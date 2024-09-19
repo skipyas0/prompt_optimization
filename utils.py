@@ -1,5 +1,14 @@
 from datasets import load_dataset, Dataset
 import re
+import json
+
+def load_log_dict(path: str) -> list[dict]:
+    data = []
+    with open(path, 'r') as file:
+        for line in file:
+            data.append(json.loads(line))  # Convert each line to a dictionary
+    return data
+
 def load_splits(ds_name: str, split: tuple[int, int, int]) -> tuple[Dataset, Dataset, Dataset]:
     """
     Load dataset and split it according to sample numbers in input tuple.
@@ -17,7 +26,7 @@ def join_dataset_to_str(dataset: Dataset) -> str:
 
     res = ""
 
-    features = dataset.features()
+    features = dataset.features
     for sample in dataset:
         for feature in features:
             res += f"<{feature}> {sample[feature]} </{feature}>\n"

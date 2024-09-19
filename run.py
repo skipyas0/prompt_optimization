@@ -25,14 +25,15 @@ if __name__ == "__main__":
     score = lambda ground, x: eval.ask_llm_to_compare(ground, x, usage_handle)
 
     """
-    #fast debug to replace LLM calls
+    #fast debug to replace LLM calls - comment out line 19
     import random 
-    def scramble(input: str) -> str:
+    def scramble(input: str, _: int = 0) -> str:
         char_list = list(input)
         random.shuffle(char_list)
         return ''.join(char_list)
-    gen_handle = scramble
-    score = lambda _: random.random()
+    gen_handle_variable_length = scramble
+    usage_handle = scramble
+    score = lambda _0, _1: random.random()
     """
 
     ident = getenv("SLURM_JOB_ID") or datetime.now().strftime('%H-%M-%S_%d-%m-%Y')

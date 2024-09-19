@@ -23,7 +23,7 @@ class OpenAIPredictor:
         )
         return completion
     
-    def predict(self, messages=None, question=None, n=1, temperature=0.0, tok=10000):
+    def predict(self, messages=None, question=None, n=1, temperature=0.75, tok=10000):
         if messages is None:
             messages = [{"role": "system", "content": "You are a helpful assistant. You follow instructions and answer concisely."}]
             

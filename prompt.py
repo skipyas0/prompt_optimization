@@ -12,16 +12,27 @@ class PromptParams():
         self.task_insert_index = task_insert_index
 
 class Prompt():
-    def __init__(self, traits: list[str], params: PromptParams) -> None:    
-        self.params = params
-        self.traits = traits
-        self.n_traits = len(self.traits)
-        self.fitness = float('-inf')
-        self.best_fitness = float('-inf')
-        self.generation_number = 1
-        self.result = ["",""]
-        self.id = randint(10000000, 99999999)
-        self.parent_ids = []
+    def __init__(self, traits: list[str] | dict, params: PromptParams) -> None: 
+        if isinstance(traits, dict):   
+            self.params = params
+            self.traits = traits['traits']
+            self.n_traits = len(self.traits)
+            self.fitness = traits['avg_fitness']
+            self.best_fitness = traits['best_fitness']
+            self.generation_number = traits['generation']
+            self.result = traits['best_task_result']
+            self.id = traits['id']
+            self.parent_ids = traits['parent_ids']
+        else:
+            self.params = params
+            self.traits = traits
+            self.n_traits = len(self.traits)
+            self.fitness = float('-inf')
+            self.best_fitness = float('-inf')
+            self.generation_number = 1
+            self.result = ["",""]
+            self.id = randint(10000000, 99999999)
+            self.parent_ids = []
 
     def __str__(self) -> str:
         ix = self.params.task_insert_index
@@ -42,7 +53,6 @@ class Prompt():
         new = Prompt(self.traits.copy(), self.params)
         new.generation_number = self.generation_number
         return new
-    
     def log(self) -> None:
         log_entry = {
             'id': self.id,
