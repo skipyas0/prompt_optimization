@@ -26,7 +26,7 @@ def load_splits(ds_name: str, split: tuple[int, int, int]) -> tuple[Dataset, Dat
     test = ds.select(range(sum(split[:2]), sum(split)))
     return infer, train, test
 
-def join_dataset_to_str(dataset: Dataset) -> str:   
+def join_dataset_to_str(dataset: Dataset, insertion_token: str) -> str:   
     """
     Join samples from datasets to single string with <in> <out> html-like tags.
     """
@@ -35,6 +35,7 @@ def join_dataset_to_str(dataset: Dataset) -> str:
 
     features = dataset.features
     for sample in dataset:
+        res += insertion_token
         for feature in features:
             res += f"<{feature}> {sample[feature]} </{feature}>\n"
         res += '\n'

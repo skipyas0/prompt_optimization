@@ -6,3 +6,5 @@ Your instructions should maximize the likelihood of correct answers for similar 
 <examples>
 {}
 </examples>
+
+You are replacing <-INS-> with your answer. Get straight to the point.
