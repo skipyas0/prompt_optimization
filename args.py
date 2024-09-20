@@ -5,7 +5,7 @@ from utils import load_splits
 from datasets import Dataset
 from types import NoneType
 
-def parse_args():
+def parse_args(log_file: str):
     parser = argparse.ArgumentParser(description="Prompt optimalization with evolutionary algorithm")
     parser.add_argument('--initial_population_size', type=int, default=20, help='Initial size of the population')
     parser.add_argument('--population_change_rate', type=int, default=0, help='Rate of population change')
@@ -29,13 +29,18 @@ def parse_args():
 
     parser.add_argument('--debug', action='store_true', help='Debug mode: No LLM, go through evolution with scrambling text and assigning random scores.')
     args = parser.parse_args()
+
+    if args.log:
+        from json import dump
+        with open(log_file, 'w') as f:
+            dump(vars(args), f, indent=4)
     return args
 
-def parse_args_and_init() -> tuple[EvoParams, tuple[Dataset, Dataset, Dataset], OpenAIPredictor | NoneType]:
+def parse_args_and_init(log_file: str) -> tuple[EvoParams, tuple[Dataset, Dataset, Dataset], OpenAIPredictor | NoneType]:
     """
     Parses CLI args and initialized parameters for evolutionary algorithm, dataset splits and OpenAI API object.
     """
-    args = parse_args()
+    args = parse_args(log_file)
     evo_params = EvoParams(
         initial_population_size=args.initial_population_size,
         population_change_rate=args.population_change_rate,

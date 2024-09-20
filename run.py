@@ -8,13 +8,15 @@ from reconstruct import best_prompts_from_each_gen, evaluate_progression
 from visualization import plot_generations
 
 if __name__ == "__main__":
-    evo_params, splits, api = parse_args_and_init()
-    infer, train, eval_data = splits
-    examples = utils.join_dataset_to_str(infer, "<-INS->\n")
-
     ident = getenv("SLURM_JOB_ID") or datetime.now().strftime('%H-%M-%S_%d-%m-%Y')
     log_file = f"logs/results/{ident}.ndjson"
 
+    evo_params, splits, api = parse_args_and_init(log_file)
+    infer, train, eval_data = splits
+
+    instruction_insertion_token = "<-INS->\n"
+    examples = utils.join_dataset_to_str(infer, instruction_insertion_token)
+    
     usage_handle, score_handle = utils.create_api_handles(api, log_file)
     
     suffix = """
