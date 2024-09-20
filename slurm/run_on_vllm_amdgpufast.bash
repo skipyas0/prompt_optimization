@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH --time=4:00:00
 #SBATCH --nodes=1 --ntasks-per-node=1 --cpus-per-task=4
-#SBATCH --partition=amdgpufast --gres=gpu:2
-#SBATCH --mem=96G
+#SBATCH --partition=amdgpufast --gres=gpu:4
+#SBATCH --mem=128G
 #SBATCH --out=/home/kloudvoj/devel/prompt_optimalization/logs/slurm_out/vllm-api.%j.out
 
 source "/home/kloudvoj/devel/universal_scripts/init_environment_vllm_amd.sh"

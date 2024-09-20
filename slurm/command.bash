@@ -1,0 +1,1 @@
+sbatch slurm/run_on_vllm_amdgpufast.bash --initial_population_size 10 --mating_pool_size 6 --prompt_mutation_probability 0.5 --max_iters 10 --train_batch_size 3 --temp 0.5
