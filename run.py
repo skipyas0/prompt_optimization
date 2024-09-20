@@ -17,7 +17,15 @@ if __name__ == "__main__":
 
     usage_handle, score_handle = utils.create_api_handles(api, log_file)
     
-    prompt_params = PromptParams(usage_handle, score_handle, log_file, evo_params.task_insert_ix)
+    suffix = """
+    After your explanation, make sure you put your final answer in three pairs of square brackets.
+    <example>
+    ...
+    And for the above reasons, the solution is ANSWER.
+    [[[ANSWER]]]
+    </example>
+    """
+    prompt_params = PromptParams(usage_handle, score_handle, log_file, evo_params.task_insert_ix, suffix)
     EA = EvolutionaryAlgorithm(evo_params, usage_handle, train)
     EA.populate(prompt_params, examples)
     EA.run()

@@ -169,7 +169,7 @@ class EvolutionaryAlgorithm():
         Access prewritten instructions to be used in genetic operators.
         """
         curr_path = os.getcwd()
-        path = curr_path + '/prompts/'
+        path = curr_path + '/metaprompts/'
         for fn in os.listdir(path):
             op_name = fn.split('.')[0]
             with open(path + fn, 'r') as file:

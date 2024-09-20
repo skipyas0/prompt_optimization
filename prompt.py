@@ -5,11 +5,12 @@ from datasets import Dataset
 import json
 
 class PromptParams():
-    def __init__(self, usage_handle: Callable[[str], str], evalutation_handle: Callable[[str, str], float], log_file: str, task_insert_index: int) -> None:
+    def __init__(self, usage_handle: Callable[[str], str], evalutation_handle: Callable[[str, str], float], log_file: str, task_insert_index: int, prompt_suffix: str) -> None:
         self.usage_handle = usage_handle
         self.evaluation_handle = evalutation_handle
         self.log_file = log_file
         self.task_insert_index = task_insert_index
+        self.prompt_suffix = prompt_suffix
 
 class Prompt():
     def __init__(self, traits: list[str] | dict, params: PromptParams) -> None: 
@@ -45,7 +46,7 @@ class Prompt():
         """
         Evalute mean performance over batch of tasks
         """
-        results = [self.params.usage_handle(str(self).format(task['question'])) for task in batch]
+        results = [self.params.usage_handle(str(self).format(task['question']) + self.params.prompt_suffix) for task in batch]
         ground_truths = [task['answer'] for task in batch]
         fitness_scores = [self.params.evaluation_handle(ground, gen) for ground, gen in zip(results, ground_truths)]
         self.best_fitness, self.result = max(zip(fitness_scores, results)) # save result with best performance on 
