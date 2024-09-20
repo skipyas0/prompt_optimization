@@ -26,6 +26,7 @@ def crossover(
         res.traits[ix] = crossover_handle([t1, t2])
 
     res.parent_ids = [id1, prompt2.id]
+    res.generation_number += 1
     return res
 
 
@@ -37,8 +38,12 @@ def de_combination(
         Callable[[list[str]], str],
     ],
 ):
-    
-    p1, p2, p3 = prompts
+    """
+    Perform Differential Evolution combination of traits defined by
+    out = Crossover(Mutate(p1 - p2) + p3, basic)
+    where -,+ are 'difference and addition in the semantic space'
+    """  
+    p1, p2, p3, basic = prompts
     res = p1.copy()
 
     de1, de2, de3 = handles
@@ -54,4 +59,6 @@ def de_combination(
         res.traits[ix] = de3([mutated, t3])
     
     res.parent_ids = [p1.id, p2.id, p3.id]
-    return res
+
+    out = crossover(res, basic)
+    return out

@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 from sys import argv
 
-def plot_generations(scores: list[float], fn: str) -> None:
+def plot_generations(scores: list[float], plot_path: str) -> None:
     x = range(1, len(scores) + 1)
     # Create the plot
     plt.figure()
@@ -11,7 +11,7 @@ def plot_generations(scores: list[float], fn: str) -> None:
     plt.title('Evolution progress')
 
     # Save the plot as a vector image (SVG)
-    plt.savefig(f'plots/{fn}.svg', format='svg')
+    plt.savefig(f'plots/{plot_path}.svg', format='svg')
 
 if __name__ == "__main__":
     from reconstruct import evaluate_from_json

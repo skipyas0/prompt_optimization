@@ -13,13 +13,16 @@ def simple_list_intersection(ground: str, sample: str, delimeter: str = 'l') -> 
     return len(common) / len(total)
 
 def ask_llm_to_compare(ground: str, sample: str, gen_handle: Callable[[str], str]) -> float:
+    """
+    Ask llm to rate the similarity of the two solutions based on a 5-point scale.
+    """
 
     rating_scale = ["unrelated", "somewhat related", "similar", "very similar", "equivalent"]
     rs_with_formatting = [f"[[[{i}]]]" for i in rating_scale]
     flip = random() < 0.5 # prevent text order bias
 
     prompt = f"""
-        You are a skilled text evaluator capable of comparing any two texts and rate their similarity.
+        You are a skilled text evaluator capable of comparing any two texts and rate their semantic similarity.
         Compare these two texts along with whatever conclusions they come to. 
 
         <text1>

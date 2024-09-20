@@ -12,7 +12,6 @@ Calls are done with OpenAI API to a VLLM server.
 - faculty email: kloudvoj@fel.cvut.cz
 
 ## TODOs
-- add CLI
 - add ability to run on OpenAI cloud
 - add support to run on local GPU with some models
 - find other compatible models and add them

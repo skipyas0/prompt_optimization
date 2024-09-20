@@ -3,10 +3,12 @@ import re
 import json
 from vllm_api import OpenAIPredictor
 from types import NoneType
-import evaluators as eval
 import random 
 
 def load_log_dict(path: str) -> list[dict]:
+    """
+    Open .ndjson and load it as list of dicts
+    """
     data = []
     with open(path, 'r') as file:
         for line in file:
@@ -54,10 +56,10 @@ def create_api_handles(api: OpenAIPredictor | NoneType):
             char_list = list(input)
             random.shuffle(char_list)
             return ''.join(char_list)
-        gen_handle_variable_length = scramble
         usage_handle = scramble
         score = lambda _0, _1: random.random()
     else:
+        import evaluators as eval
         usage_handle = lambda prompt: api.predict(question=prompt)
         score = lambda ground, x: eval.ask_llm_to_compare(ground, x, usage_handle)
     return usage_handle, score

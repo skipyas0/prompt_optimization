@@ -49,6 +49,7 @@ class EvolutionaryAlgorithm():
 
     def __init__(self, params: EvoParams, generation_handle: Callable[[str], str], tasks: Dataset) -> None:
         self.population: list[Prompt] = []
+        self.all_prompts: list[Prompt] = []
         self.params = params
         self.pop_size = self.params.initial_population_size
         
@@ -68,8 +69,13 @@ class EvolutionaryAlgorithm():
         """
         for _ in range(self.params.max_iters):
             self.step()
+            self.all_prompts += self.population
 
     def populate(self, prompt_params: PromptParams, infer_task_samples: str) -> None:
+        """
+        Generate initial prompts based on task input/output samples.
+        """
+
         for _ in range(self.params.initial_population_size):
             traits = []
             for tr in self.params.trait_ids:
@@ -93,7 +99,7 @@ class EvolutionaryAlgorithm():
             s1, s2 = self.population[i1], self.population[i2]
 
             res = op.crossover(s1, s2, self.task_specific_handles['crossover'])
-            res.generation_number += 1
+            
             offsprings.append(res)
 
         self.population += offsprings
@@ -110,18 +116,17 @@ class EvolutionaryAlgorithm():
         selected_prompts = self.selection()
 
         handles = tuple(self.task_specific_handles[s] for s in ['de1', 'de2', 'de3'])
-        # DE crossover procedure
+
         basic = selected_prompts[-1]
         lotto = range(self.params.mating_pool_size - 1)
         offsprings = []
         while len(self.population) + len(offsprings) < self.pop_size:
             # New offspring is Crossover(Mutate(s1 - s2) + s3, basic)
             i1, i2, i3 = sample(lotto, 3)
-            prompts = (self.population[i1], self.population[i2], self.population[i3])
-            res1 = op.de_combination(prompts, handles)
-            res2 = op.crossover(res1, basic)
-            res2.generation_number += 1
-            offsprings.append(res2)
+            prompts = (self.population[i1], self.population[i2], self.population[i3], basic)
+            res = op.de_combination(prompts, handles)
+
+            offsprings.append(res)
 
         self.population += offsprings
 

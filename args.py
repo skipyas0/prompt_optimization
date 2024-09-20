@@ -6,7 +6,7 @@ from datasets import Dataset
 from types import NoneType
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Initialize EvoParams for evolutionary algorithm")
+    parser = argparse.ArgumentParser(description="Prompt optimalization with evolutionary algorithm")
     parser.add_argument('--initial_population_size', type=int, default=20, help='Initial size of the population')
     parser.add_argument('--population_change_rate', type=int, default=0, help='Rate of population change')
     parser.add_argument('--mating_pool_size', type=int, default=10, help='Size of the mating pool')
@@ -32,6 +32,9 @@ def parse_args():
     return args
 
 def parse_args_and_init() -> tuple[EvoParams, tuple[Dataset, Dataset, Dataset], OpenAIPredictor | NoneType]:
+    """
+    Parses CLI args and initialized parameters for evolutionary algorithm, dataset splits and OpenAI API object.
+    """
     args = parse_args()
     evo_params = EvoParams(
         initial_population_size=args.initial_population_size,

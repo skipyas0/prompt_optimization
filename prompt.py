@@ -35,6 +35,9 @@ class Prompt():
             self.parent_ids = []
 
     def __str__(self) -> str:
+        """
+        Generate formattable string from prompt traits.
+        """
         ix = self.params.task_insert_index
         return '\n'.join(self.traits[:ix]) + '\n<task>\n{}\n</task>\n' + '\n'.join(self.traits[ix:]) 
 
@@ -52,8 +55,16 @@ class Prompt():
     def copy(self) -> Prompt:
         new = Prompt(self.traits.copy(), self.params)
         new.generation_number = self.generation_number
+        new.fitness = self.fitness
+        new.best_fitness = self.best_fitness
+        new.id = self.id
+        new.parent_ids = self.parent_ids
         return new
+    
     def log(self) -> None:
+        """
+        Add entry about self to .ndjson defined in PromptParams.
+        """
         log_entry = {
             'id': self.id,
             'parent_ids': self.parent_ids,

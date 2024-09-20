@@ -6,7 +6,7 @@ from prompt import Prompt, PromptParams
 def reconstruct_prompts(prompt_data: list[dict], prompt_params: PromptParams) -> list[Prompt]:
     return [Prompt(p, prompt_params) for p in prompt_data]
 
-def select_best_prompts(prompts: list[Prompt], n: int) -> list[list[Prompt]]:
+def best_prompts_from_each_gen(prompts: list[Prompt], n: int = 3) -> list[list[Prompt]]:
     """
     Choose n prompts from each generation (k gens in total) with best avg scores.
     Outputs [k*[n*prompt]]
@@ -30,8 +30,12 @@ def evaluate_generation(prompts: list[Prompt], eval_data: Dataset) -> float:
 def evaluate_progression(prompt_generations: list[list[Prompt]], eval_data: Dataset) -> list[float]:
     return [evaluate_generation(g, eval_data) for g in prompt_generations]
 
-def evaluate_from_json(path: str, n_per_gen: int) -> list[float]:
+def evaluate_from_json(path: str, n_per_gen: int, prompt_params: PromptParams) -> list[float]:
+    """
+    For later analysis, extract prompts from .ndjson, evaluate them using handles from PromptParams object.
+    Output list of per-generation average scores.
+    """
     json = utils.load_log_dict(path)
-    prompts = reconstruct_prompts(json)
-    best = select_best_prompts(prompts, n_per_gen)
+    prompts = reconstruct_prompts(json, prompt_params)
+    best = best_prompts_from_each_gen(prompts, n_per_gen)
     return evaluate_progression(best)
