@@ -16,7 +16,8 @@ if __name__ == "__main__":
 
     
     model = "hugging-quants/Meta-Llama-3.1-70B-Instruct-AWQ-INT4"
-    api = OpenAIPredictor(model)
+    temp = 0.75
+    api = OpenAIPredictor(model, temp)
     gen_handle_variable_length = lambda prompt, tok: api.predict(question=prompt, tok=tok)
 
     # TODO: Rethink how prompts access generation mainly during evaluation 
@@ -44,7 +45,7 @@ if __name__ == "__main__":
     insert_ix = 1
 
     prompt_params = PromptParams(usage_handle, score, log_file, insert_ix)
-    params = EvoParams(initial_population_size=10, max_iters=20, mating_pool_size=6)
+    params = EvoParams(initial_population_size=8, max_iters=10, mating_pool_size=4)
     EA = EvolutionaryAlgorithm(params, gen_handle_variable_length, train)
     EA.populate(prompt_params, trait_ids, examples)
     EA.run()

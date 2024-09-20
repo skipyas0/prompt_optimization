@@ -2,9 +2,9 @@ import openai
 import os
 
 class OpenAIPredictor:
-    def __init__(self, model):
+    def __init__(self, model, temp):
         self.model = model
-
+        self.temp = temp
         port = os.environ["VLLM_MY_PORT"]
 
         self.client = openai.OpenAI(
@@ -12,18 +12,18 @@ class OpenAIPredictor:
             api_key="EMPTY",
         )
 
-    def forward(self, messages, temperature, n, tok):
+    def forward(self, messages, tok):
         completion = self.client.chat.completions.create(
             model=self.model,
             messages=messages,
-            temperature=temperature,
-            n=n,
+            temperature=self.temp,
+            n=1,
             frequency_penalty=0.1,
             max_tokens=tok
         )
         return completion
     
-    def predict(self, messages=None, question=None, n=1, temperature=0.75, tok=10000):
+    def predict(self, messages=None, question=None, tok=10000):
         if messages is None:
             messages = [{"role": "system", "content": "You are a helpful assistant. You follow instructions and answer concisely."}]
             
@@ -35,8 +35,6 @@ class OpenAIPredictor:
         try:
             completion = self.forward(
                 messages=msgs,
-                temperature=temperature,
-                n=n,
                 tok=tok
             )
 
