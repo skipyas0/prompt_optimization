@@ -66,6 +66,7 @@ class Prompt():
         Add entry about self to .ndjson defined in PromptParams.
         """
         log_entry = {
+            'type': "prompt",
             'id': self.id,
             'parent_ids': self.parent_ids,
             'generation': self.generation_number,

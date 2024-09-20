@@ -4,7 +4,10 @@ from prompt import Prompt, PromptParams
 
 
 def reconstruct_prompts(prompt_data: list[dict], prompt_params: PromptParams) -> list[Prompt]:
-    return [Prompt(p, prompt_params) for p in prompt_data]
+    """
+    Select all dicts that represent a prompt and reconstruct them into objects
+    """
+    return [Prompt(p, prompt_params) for p in filter(lambda x: x['type'] == "prompt", prompt_data)]
 
 def best_prompts_from_each_gen(prompts: list[Prompt], n: int = 3) -> list[list[Prompt]]:
     """

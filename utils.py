@@ -3,6 +3,7 @@ import re
 import json
 from vllm_api import OpenAIPredictor
 from types import NoneType
+from typing import Callable
 import random 
 
 def load_log_dict(path: str) -> list[dict]:
@@ -49,17 +50,40 @@ def parse_verdict(text: str) -> str:
 
     return matches
 
-def create_api_handles(api: OpenAIPredictor | NoneType):
+def log_usage(log_file: str, input: str, output: str | float) -> None:
+    """
+    Add entry about handle usage to log file.
+    """
+    log_entry = {
+        'type': "usage" if type(output) == str else "score",
+        'in': input,
+        'out': output,
+    }
+    with open(log_file, 'a') as f:
+        f.write(json.dumps(log_entry) + '\n')
+
+def create_api_handles(api: OpenAIPredictor | NoneType, log_file: str) -> tuple[Callable[[str], str], Callable[[str], float]]:
     if api is None:
         #fast debug to replace LLM calls 
         def scramble(input: str, _: int = 0) -> str:
             char_list = list(input)
             random.shuffle(char_list)
             return ''.join(char_list)
-        usage_handle = scramble
-        score = lambda _0, _1: random.random()
+        usage_helper = scramble
+        score_helper = lambda _: random.random()
     else:
         import evaluators as eval
-        usage_handle = lambda prompt: api.predict(question=prompt)
-        score = lambda ground, x: eval.ask_llm_to_compare(ground, x, usage_handle)
-    return usage_handle, score
+        usage_helper = lambda prompt: api.predict(question=prompt)
+        score_helper = lambda ground, x: eval.ask_llm_to_compare(ground, x, usage_handle)
+
+    def usage_handle(input: str) -> str:
+        out = usage_helper(input)
+        log_usage(log_file, input, out)
+        return out
+    
+    def score_handle(input: str) -> float:
+        out = score_helper(input)
+        log_usage(log_file, input, out)
+        return out
+    
+    return usage_handle, score_handle
