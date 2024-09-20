@@ -46,7 +46,8 @@ def parse_verdict(text: str) -> str:
     """
     Parse [[[verdict]]]
     """
-    pattern = r'\[\[\[(.*?)\]\]\]'
+    pattern = r'\[\[\[([a-z]+)\]\]\]'# <- only lowercase letters 
+    #any char - r'\[\[\[(.*?)\]\]\]'
     matches = re.findall(pattern, text)
 
     return matches
