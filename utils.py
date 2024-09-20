@@ -1,6 +1,10 @@
 from datasets import load_dataset, Dataset
 import re
 import json
+from vllm_api import OpenAIPredictor
+from types import NoneType
+import evaluators as eval
+import random 
 
 def load_log_dict(path: str) -> list[dict]:
     data = []
@@ -42,3 +46,18 @@ def parse_verdict(text: str) -> str:
     matches = re.findall(pattern, text)
 
     return matches
+
+def create_api_handles(api: OpenAIPredictor | NoneType):
+    if api is None:
+        #fast debug to replace LLM calls 
+        def scramble(input: str, _: int = 0) -> str:
+            char_list = list(input)
+            random.shuffle(char_list)
+            return ''.join(char_list)
+        gen_handle_variable_length = scramble
+        usage_handle = scramble
+        score = lambda _0, _1: random.random()
+    else:
+        usage_handle = lambda prompt: api.predict(question=prompt)
+        score = lambda ground, x: eval.ask_llm_to_compare(ground, x, usage_handle)
+    return usage_handle, score

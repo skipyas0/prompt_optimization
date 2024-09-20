@@ -20,8 +20,8 @@ def roulette_selection(population: list[Prompt], params: EvoParams) -> list[Prom
     The better the fitness, the higher the probability of being selected.
     """
 
-    sm_scores = torch.softmax(torch.tensor([s.fitness for s in population]))
-    counts = (10 * sm_scores / sm_scores.min()).ceil().tolist()
+    sm_scores = torch.softmax(torch.tensor([s.fitness for s in population]), dim=0)
+    counts = map(int,(10 * sm_scores / sm_scores.min()).ceil().tolist())
 
     mating_pool = sample(population, params.mating_pool_size,
                             counts=counts)

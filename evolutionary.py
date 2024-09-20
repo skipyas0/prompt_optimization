@@ -14,7 +14,8 @@ class EvoParams():
                  initial_population_size: int=20,
                  population_change_rate: int=0,
                  mating_pool_size: int=10,
-                 prompt_trait_n: int=1,
+                 trait_ids: str = ['instructions'],
+                 task_insert_ix: int = 1,
                  prompt_mutation_probability: float=1.0,
                  trait_mutation_percentage: float=1.0,
                  max_iters: int=100,
@@ -27,7 +28,9 @@ class EvoParams():
         self.population_change_rate = population_change_rate
         self.mating_pool_size = mating_pool_size
         assert self.initial_population_size >= self.mating_pool_size
-        self.prompt_trait_n = prompt_trait_n
+        self.trait_ids = trait_ids
+        self.prompt_trait_n = len(trait_ids)
+        self.task_insert_ix = task_insert_ix
         self.prompt_mutation_probability = prompt_mutation_probability
         self.trait_mutation_percentage = trait_mutation_percentage
         self.max_iters = max_iters
@@ -44,12 +47,16 @@ class EvolutionaryAlgorithm():
     Class for prompt optimalization using evolutionary algorithms.
     """
 
-    def __init__(self, params: EvoParams, generation_handle: Callable[[str, int], str], tasks: Dataset) -> None:
+    def __init__(self, params: EvoParams, generation_handle: Callable[[str], str], tasks: Dataset) -> None:
         self.population: list[Prompt] = []
         self.params = params
         self.pop_size = self.params.initial_population_size
-        self.task_specific_handles: dict[str, Callable[[list[str]], str]] = dict()
-        self.gen = generation_handle # func with prompt and max_tokens as args
+        
+        # !!! important !!! handles only accept list of strings
+        # necessary for formatting into prompt templates -> asterisk unwrapper
+        self.task_specific_handles: dict[str, Callable[[list[str]], str]] = dict() 
+
+        self.gen = generation_handle 
         self.tasks = tasks
         self.load_instructions()
 
@@ -62,10 +69,10 @@ class EvolutionaryAlgorithm():
         for _ in range(self.params.max_iters):
             self.step()
 
-    def populate(self, prompt_params: PromptParams, trait_ids: list[str], infer_task_samples: str) -> None:
+    def populate(self, prompt_params: PromptParams, infer_task_samples: str) -> None:
         for _ in range(self.params.initial_population_size):
             traits = []
-            for tr in trait_ids:
+            for tr in self.params.trait_ids:
                 traits.append(self.task_specific_handles[tr]([infer_task_samples]))
             
             new = Prompt(traits, prompt_params)
@@ -157,15 +164,14 @@ class EvolutionaryAlgorithm():
         Access prewritten instructions to be used in genetic operators.
         """
         curr_path = os.getcwd()
-        path = curr_path + '/genop_prompts/'
+        path = curr_path + '/prompts/'
         for fn in os.listdir(path):
             op_name = fn.split('.')[0]
             with open(path + fn, 'r') as file:
                 instructions = file.read()
 
                 # Store a handle to be used with 1 or 2 prompt-traits
-                # Unpack them and format them into the instruction template
-                tok = 10 if op_name == "generation_start" else 10000
-                self.task_specific_handles[op_name] = lambda s: self.gen(instructions.format(*s), tok)
+                # Unpack them and format them into the instruction template - it has 1 or 2 {} brackets for formatting
+                self.task_specific_handles[op_name] = lambda s: self.gen(instructions.format(*s))
 
         assert len(self.task_specific_handles.keys()) == len(os.listdir(path))

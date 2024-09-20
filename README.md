@@ -1,5 +1,5 @@
 # Prompt optimalization
-This repository constains code for bachelor's thesis on the topic of LLM prompt optimalization.
+This repository constains code for my bachelor's thesis on the topic of LLM prompt optimalization.
 The main focus is on optimalization through evolutionary algorithms.
 
 ## Usage
@@ -7,6 +7,9 @@ The main focus is on optimalization through evolutionary algorithms.
 
 As of now only possible using a SLURM job scheduler and a SLURM script on a compute cluster. 
 Calls are done with OpenAI API to a VLLM server.
+
+## Contact me
+- faculty email: kloudvoj@fel.cvut.cz
 
 ## TODOs
 - add CLI

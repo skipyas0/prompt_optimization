@@ -27,4 +27,4 @@ done
 
 # Now run code which uses the server
 export PYTHONPATH=.:$PYTHONPATH
-python /home/kloudvoj/devel/prompt_optimalization/run.py
+python /home/kloudvoj/devel/prompt_optimalization/run.py "$@"
