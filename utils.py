@@ -51,15 +51,24 @@ def parse_verdict(text: str) -> str:
 
     return matches
 
-def log_usage(log_file: str, input: str, output: str | float) -> None:
+def log_usage(log_file: str, input: str | tuple[str, str], output: str | float) -> None:
     """
     Add entry about handle usage to log file.
     """
-    log_entry = {
-        'type': "usage" if type(output) == str else "score",
-        'in': input,
-        'out': output,
-    }
+    if type(output) == str:
+        log_entry = {
+            'type': "usage",
+            'in': input,
+            'out': output,
+        }
+    else:
+        log_entry = {
+            'type': "score",
+            'in': input[0],
+            'ground': input[1],
+            'out': output,
+        }
+
     with open(log_file, 'a') as f:
         f.write(json.dumps(log_entry) + '\n')
 
@@ -71,7 +80,7 @@ def create_api_handles(api: OpenAIPredictor | NoneType, log_file: str) -> tuple[
             random.shuffle(char_list)
             return ''.join(char_list)
         usage_helper = scramble
-        score_helper = lambda _: random.random()
+        score_helper = lambda _0, _1: random.random()
     else:
         import evaluators as eval
         usage_helper = lambda prompt: api.predict(question=prompt)
@@ -82,9 +91,9 @@ def create_api_handles(api: OpenAIPredictor | NoneType, log_file: str) -> tuple[
         log_usage(log_file, input, out)
         return out
     
-    def score_handle(input: str) -> float:
-        out = score_helper(input)
-        log_usage(log_file, input, out)
+    def score_handle(ground: str, input: str) -> float:
+        out = score_helper(ground, input)
+        log_usage(log_file, (input, ground), out)
         return out
     
     return usage_handle, score_handle
