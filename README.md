@@ -6,9 +6,10 @@ The main focus is on optimalization through evolutionary algorithms.
 As of now only possible using a SLURM job scheduler and a SLURM script on a compute cluster. 
 Calls are done with OpenAI API to a VLLM server.
 Batch scripts in slurm folder.
+Mandatory argument: model
 Example:
 '''
-sbatch slurm/run_on_vllm_amdgpufast.bash --initial_population_size 10
+sbatch slurm/run_on_vllm_amdgpufast.bash "microsoft/Phi-3.5-mini-instruct" --initial_population_size 10
 '''
 
 Debug mode: *python run.py --debug*
@@ -22,3 +23,14 @@ Debug mode: *python run.py --debug*
 - add support to run on local GPU with some models
 - find other compatible models and add them
 - add other implementations of evolutionary algorithms - currently only classic genetic algorithm and differential evolution are supported
+
+## Tested models
+- hugging-quants/Meta-Llama-3.1-70B-Instruct-AWQ-INT4
+- Qwen/Qwen2.5-14B-Instruct
+- microsoft/Phi-3.5-mini-instruct (runs on V100)
+
+## Tested datasets
+- openai/gsm8k
+- microsoft/orca-math-word-problems-200k
+- iamollas/ethos
+- maveriq/bigbenchhard

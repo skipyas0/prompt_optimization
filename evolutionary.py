@@ -23,7 +23,9 @@ class EvoParams():
                  selection_mode: Literal['rank', 'roulette', 'tournament']='rank',
                  tournament_group_size: int=3,
                  train_batch_size: int=5,
-                 log: bool = True)-> None:
+                 log: bool = True,
+                 combine_co_mut: bool = True,
+                 scorer: str = "ask_llm_to_compare")-> None:
         self.initial_population_size = initial_population_size
         self.population_change_rate = population_change_rate
         self.mating_pool_size = mating_pool_size
@@ -39,7 +41,8 @@ class EvoParams():
         self.tournament_group_size = tournament_group_size
         self.train_batch_size = train_batch_size
         self.log=log
-
+        self.combine_co_mut=combine_co_mut
+        self.scorer=scorer
 import selection_mechanisms as sm
 
 class EvolutionaryAlgorithm():
@@ -98,13 +101,16 @@ class EvolutionaryAlgorithm():
             i1, i2 = sample(lotto, 2)
             s1, s2 = self.population[i1], self.population[i2]
 
-            res = op.crossover(s1, s2, self.task_specific_handles['crossover'])
+            if self.params.combine_co_mut:
+                res = op.crossover(s1, s2, self.task_specific_handles['mutated_crossover'])
+            else:
+                res = op.crossover(s1, s2, self.task_specific_handles['crossover'])
+                if random() < self.params.prompt_mutation_probability:
+                    op.mutate(res, self.task_specific_handles['mutation'])
             
             offsprings.append(res)
 
         self.population += offsprings
-
-        self.mutate_group(self.population)
 
         self.pop_size = max(self.params.mating_pool_size,
                             self.pop_size + self.params.population_change_rate)

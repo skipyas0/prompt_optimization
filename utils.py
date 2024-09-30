@@ -46,7 +46,17 @@ def parse_verdict(text: str) -> str:
     """
     Parse [[[verdict]]]
     """
-    pattern = r'\[\[\[([a-z]+)\]\]\]'# <- only lowercase letters 
+    pattern = r'\[\[\[([a-z]+ ?[a-z]*)\]\]\]'# <- only lowercase letters 
+    #any char - r'\[\[\[(.*?)\]\]\]'
+    matches = re.findall(pattern, text)
+
+    return matches
+
+def parse_answer(text: str) -> str:
+    """
+    Parse [[answer]]
+    """
+    pattern = r'\[\[(.*)\]\]'
     #any char - r'\[\[\[(.*?)\]\]\]'
     matches = re.findall(pattern, text)
 
@@ -73,7 +83,7 @@ def log_usage(log_file: str, input: str | tuple[str, str], output: str | float) 
     with open(log_file, 'a') as f:
         f.write(json.dumps(log_entry) + '\n')
 
-def create_api_handles(api: OpenAIPredictor | NoneType, log_file: str) -> tuple[Callable[[str], str], Callable[[str], float]]:
+def create_api_handles(api: OpenAIPredictor | NoneType, log_file: str, scorer: str) -> tuple[Callable[[str], str], Callable[[str], float]]:
     if api is None:
         #fast debug to replace LLM calls 
         def scramble(input: str, _: int = 0) -> str:
@@ -83,9 +93,12 @@ def create_api_handles(api: OpenAIPredictor | NoneType, log_file: str) -> tuple[
         usage_helper = scramble
         score_helper = lambda _0, _1: random.random()
     else:
-        import evaluators as eval
+        import evaluators as ev
         usage_helper = lambda prompt: api.predict(question=prompt)
-        score_helper = lambda ground, x: eval.ask_llm_to_compare(ground, x, usage_handle)
+        if scorer == "ask_llm_to_compare":
+            score_helper = lambda ground, x: ev.ask_llm_to_compare(ground, x, usage_handle)
+        elif scorer == "binary_match":
+            score_helper = lambda ground, x: ev.binary_match(ground, x)
 
     def usage_handle(input: str) -> str:
         out = usage_helper(input)
@@ -93,6 +106,12 @@ def create_api_handles(api: OpenAIPredictor | NoneType, log_file: str) -> tuple[
         return out
     
     def score_handle(ground: str, input: str) -> float:
+
+        # if this is the gsm8k dataset, the answer is EXPLANATION #### NUMERIC ANSWER
+        spl = ground.split("####")
+        if len(spl) == 2:
+            ground = spl[1].strip()
+
         out = score_helper(ground, input)
         log_usage(log_file, (input, ground), out)
         return out

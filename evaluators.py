@@ -1,5 +1,5 @@
 from typing import Callable
-from utils import parse_verdict
+from utils import parse_verdict, parse_answer
 from random import random
 def simple_list_intersection(ground: str, sample: str, delimeter: str = 'l') -> float:
     """
@@ -43,3 +43,9 @@ def ask_llm_to_compare(ground: str, sample: str, gen_handle: Callable[[str], str
     
     return 0.25*rating_scale.index(verdict[0])
 
+def binary_match(ground: str, sample: str) -> float:
+    results = parse_answer(sample)
+    for r in results:
+        if r == ground:
+            return 1.0
+    return 0.0

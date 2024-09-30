@@ -34,7 +34,14 @@ class Prompt():
             self.result = ["",""]
             self.id = randint(10000000, 99999999)
             self.parent_ids = []
-
+    
+    def format(self, task: str) -> str:
+        """
+        Insert task in the prompt template and output the complete prompt
+        """
+        ix = self.params.task_insert_index
+        return '\n'.join(self.traits[:ix]) + '\n<task>\n' + task +'\n</task>\n' + '\n'.join(self.traits[ix:]) 
+    
     def __str__(self) -> str:
         """
         Generate formattable string from prompt traits.
@@ -46,7 +53,7 @@ class Prompt():
         """
         Evalute mean performance over batch of tasks
         """
-        results = [self.params.usage_handle(str(self).format(task['question']) + self.params.prompt_suffix) for task in batch]
+        results = [self.params.usage_handle(self.format(task['question']) + self.params.prompt_suffix) for task in batch]
         ground_truths = [task['answer'] for task in batch]
         fitness_scores = [self.params.evaluation_handle(ground, gen) for ground, gen in zip(results, ground_truths)]
         self.best_fitness, self.result = max(zip(fitness_scores, results)) # save result with best performance on 
