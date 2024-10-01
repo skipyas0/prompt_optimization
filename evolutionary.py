@@ -183,6 +183,10 @@ class EvolutionaryAlgorithm():
 
                 # Store a handle to be used with 1 or 2 prompt-traits
                 # Unpack them and format them into the instruction template - it has 1 or 2 {} brackets for formatting
-                self.task_specific_handles[op_name] = lambda s: self.gen(instructions.format(*s))
+                def handle(s: list[str], instructions=instructions) -> str:
+                    prompt = instructions.format(*s)
+                    return self.gen(prompt)
+                 
+                self.task_specific_handles[op_name] = handle
 
         assert len(self.task_specific_handles.keys()) == len(os.listdir(path))

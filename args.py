@@ -1,9 +1,10 @@
 import argparse
 from evolutionary import EvoParams
-from vllm_api import OpenAIPredictor
 from utils import load_splits
 from datasets import Dataset
 from types import NoneType
+from vllm_api import OpenAIPredictor
+from local_api import LocalPredictor
 
 def parse_args(log_file: str):
     parser = argparse.ArgumentParser(description="Prompt optimalization with evolutionary algorithm")
@@ -12,7 +13,7 @@ def parse_args(log_file: str):
     parser.add_argument('--initial_population_size', type=int, default=6, help='Initial size of the population')
     parser.add_argument('--population_change_rate', type=int, default=0, help='Rate of population change')
     parser.add_argument('--mating_pool_size', type=int, default=4, help='Size of the mating pool')
-    parser.add_argument('--trait_ids', type=str, nargs='+', default=["instructions"], help='List of trait identifiers')
+    parser.add_argument('--trait_ids', type=list[str], nargs='+', default=["instructions"], help='List of trait identifiers')
     parser.add_argument('--task_insert_ix', type=int, default=1, help='Position where to insert task into traits')
     parser.add_argument('--prompt_mutation_probability', type=float, default=0.5, help='Probability of prompt mutation')
     parser.add_argument('--trait_mutation_percentage', type=float, default=1.0, help='Portion of traits mutated when mutating prompt specimen')
@@ -28,7 +29,7 @@ def parse_args(log_file: str):
     parser.add_argument('--split', type=int, nargs=3, default=[4, 100, 10], help='Split sizes for initial generatIion, training and evaluation sets')
     parser.add_argument('--scorer', type=str, default="ask_llm_to_compare", help='Function used for evaluation of result')
     parser.add_argument('--temp', type=float, default=0.5, help='Temperature for model sampling')
-
+    parser.add_argument('--local', action='store_true', help='Local mode: Instead of calling a VLLM server use a transformers pipeline.')
     parser.add_argument('--debug', action='store_true', help='Debug mode: No LLM, go through evolution with scrambling text and assigning random scores.')
     args = parser.parse_args()
 
@@ -65,7 +66,7 @@ def parse_args_and_init(log_file: str) -> tuple[EvoParams, tuple[Dataset, Datase
     if args.debug:
         api = None
     else:
-        api = OpenAIPredictor(args.model, args.temp)
+        api = LocalPredictor(args.model, args.temp) if args.local else OpenAIPredictor(args.model, args.temp)
     return evo_params, load_splits(args.ds, args.split), api
 
     

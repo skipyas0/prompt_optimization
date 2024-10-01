@@ -20,7 +20,8 @@ def load_splits(ds_name: str, split: tuple[int, int, int]) -> tuple[Dataset, Dat
     """
     Load dataset and split it according to sample numbers in input tuple.
     """
-    ds = load_dataset(ds_name, split='train').shuffle(seed=42).select(range(sum(split)))
+    ds = load_dataset(ds_name, 'main', split='train') if ds_name == 'openai/gsm8k' else load_dataset(ds_name, split='train')
+    ds = ds.shuffle(seed=42).select(range(sum(split)))
     infer = ds.select(range(split[0]))
     train = ds.select(range(split[0], sum(split[:2])))
     test = ds.select(range(sum(split[:2]), sum(split)))

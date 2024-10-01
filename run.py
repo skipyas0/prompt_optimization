@@ -17,7 +17,7 @@ if __name__ == "__main__":
     instruction_insertion_token = "<-INS->\n"
     examples = utils.join_dataset_to_str(infer, instruction_insertion_token)
     
-    usage_handle, score_handle = utils.create_api_handles(api, log_file)
+    usage_handle, score_handle = utils.create_api_handles(api, log_file, evo_params.scorer)
     
     suffix = """
     After your explanation, make sure you put your final answer in two pairs of square brackets.
