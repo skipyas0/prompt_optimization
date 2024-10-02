@@ -23,6 +23,8 @@ Debug mode: *python run.py --debug*
 - add support to run on local GPU with some models
 - find other compatible models and add them
 - add other implementations of evolutionary algorithms - currently only classic genetic algorithm and differential evolution are supported
+- implement diversity enforcing methods of selection
+- try randomly varying mutation prompts with seed phrases to create more original prompts
 
 ## Tested models
 - hugging-quants/Meta-Llama-3.1-70B-Instruct-AWQ-INT4

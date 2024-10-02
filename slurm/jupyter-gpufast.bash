@@ -3,10 +3,10 @@
 #SBATCH --nodes 1
 #SBATCH --ntasks-per-node 1
 #SBATCH --mem-per-cpu 128G
-#SBATCH --gres gpu:2
+#SBATCH --gres gpu:1
 #SBATCH --time 4:00:00
 #SBATCH --job-name evoprompt-test
-#SBATCH --output /home/kloudvoj/devel/prompt_optimalization/logs/slurm_out/jupyter-%J.log
+#SBATCH --output /home/kloudvoj/devel/prompt_optimalization/logs/slurm_out/notebook-%J.log
 
 # get tunneling info
 XDG_RUNTIME_DIR=""

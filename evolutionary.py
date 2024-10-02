@@ -5,7 +5,8 @@ from prompt import Prompt, PromptParams
 from datasets import Dataset
 import genetic_operators as op
 import os
-
+from bert import Bert
+import Levenshtein
 class EvoParams(): 
     """
     Collection of parameters for evolutionary algorithm
@@ -25,7 +26,9 @@ class EvoParams():
                  train_batch_size: int=5,
                  log: bool = True,
                  combine_co_mut: bool = True,
-                 scorer: str = "ask_llm_to_compare")-> None:
+                 scorer: str = "ask_llm_to_compare",
+                 filter_similar_method: str = "None",
+                 filter_th: float = 0.95)-> None:
         self.initial_population_size = initial_population_size
         self.population_change_rate = population_change_rate
         self.mating_pool_size = mating_pool_size
@@ -43,6 +46,8 @@ class EvoParams():
         self.log=log
         self.combine_co_mut=combine_co_mut
         self.scorer=scorer
+        self.filter_similar_method=filter_similar_method
+        self.filter_th=filter_th
 import selection_mechanisms as sm
 
 class EvolutionaryAlgorithm():
@@ -63,7 +68,7 @@ class EvolutionaryAlgorithm():
         self.gen = generation_handle 
         self.tasks = tasks
         self.load_instructions()
-
+        self.bert = None if self.params.filter_similar_method == 'None' else Bert()
         self.step = self.ga_step if self.params.evolution_mode=='GA' else self.de_step
 
     def run(self) -> None:
@@ -152,6 +157,12 @@ class EvolutionaryAlgorithm():
             s.calculate_fitness(task_batch)
             if self.params.log:
                 s.log()
+
+        # apply specified deduplication method before fitness based selection
+        fsm = self.params.filter_similar_method
+        if fsm != "None":
+            sim_handle = self.bert.bert_cosine_similarity if fsm == "bert" else Levenshtein.distance
+            self.population = sm.filter_similar(self.population, self.params.filter_th, sim_handle)
 
         m = self.params.selection_mode
 

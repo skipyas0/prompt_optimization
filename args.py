@@ -31,14 +31,16 @@ def parse_args(log_file: str):
     parser.add_argument('--temp', type=float, default=0.5, help='Temperature for model sampling')
     parser.add_argument('--local', action='store_true', help='Local mode: Instead of calling a VLLM server use a transformers pipeline.')
     parser.add_argument('--debug', action='store_true', help='Debug mode: No LLM, go through evolution with scrambling text and assigning random scores.')
+    parser.add_argument('--filter_similar_method', type=str, choices=['None', 'bert', 'levenshtein'], default='None',help='How to filter prompts based on similarity. If not None, it is applied before selection mechanism.')
+    parser.add_argument('--filter_th', type=float, default=0.95, help='Filtration threshold - prompts with higher similarity are deduplicated.')
     args = parser.parse_args()
 
     if args.log:
-        from json import dump
+        from json import dumps
         args_dict = vars(args)
         args_dict["type"] = "args"
         with open(log_file, 'w') as f:
-            dump(vars(args), f)
+            f.write(dumps(vars(args)) + '\n')
     return args
 
 def parse_args_and_init(log_file: str) -> tuple[EvoParams, tuple[Dataset, Dataset, Dataset], OpenAIPredictor | NoneType]:
@@ -61,7 +63,9 @@ def parse_args_and_init(log_file: str) -> tuple[EvoParams, tuple[Dataset, Datase
         train_batch_size=args.train_batch_size,
         log=args.log,
         combine_co_mut=args.combine_co_mut,
-        scorer=args.scorer
+        scorer=args.scorer,
+        filter_similar_method=args.filter_similar_method,
+        filter_th=args.filter_th
     )
     if args.debug:
         api = None

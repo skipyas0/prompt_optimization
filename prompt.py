@@ -55,7 +55,7 @@ class Prompt():
         """
         results = [self.params.usage_handle(self.format(task['question']) + self.params.prompt_suffix) for task in batch]
         ground_truths = [task['answer'] for task in batch]
-        fitness_scores = [self.params.evaluation_handle(ground, gen) for ground, gen in zip(results, ground_truths)]
+        fitness_scores = [self.params.evaluation_handle(ground, gen) for ground, gen in zip(ground_truths, results)]
         self.best_fitness, self.result = max(zip(fitness_scores, results)) # save result with best performance on 
         self.fitness = sum(fitness_scores) / len(fitness_scores)
         return self.fitness

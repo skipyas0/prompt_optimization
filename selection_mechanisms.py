@@ -2,7 +2,7 @@ from prompt import Prompt
 from evolutionary import EvoParams
 import torch
 from random import sample
-
+from typing import Callable
 def rank_selection(population: list[Prompt], params: EvoParams) -> list[Prompt]:
         """
         Individuals are ranked based on their fitness, and selection is done based on rank.
@@ -40,3 +40,23 @@ def tournament_selection(population: list[Prompt], params: EvoParams) -> list[Pr
         group_winner = max(group, key=lambda s: s.fitness)
         mating_pool.append(group_winner)
     return mating_pool
+
+def filter_similar(population: list[Prompt], threshold: float, similarity_handle: Callable[[str, str], float]) -> list[Prompt]:
+    """
+    Deduplicate population based on a given similarity metric eg.: bert cosine similarity.
+    """
+    ix_to_pop = set()
+
+    # mark prompts that have a duplicate for removal
+    for i, p1 in enumerate(population):
+        for p2 in population[i:]:
+             sim = similarity_handle(p1, p2)
+             if sim > threshold:
+                  ix_to_pop.add(i)
+                  break
+             
+    # pop marked prompts
+    for ix in sorted(list(ix_to_pop), reverse=True):
+         population.pop(ix)
+
+    return population

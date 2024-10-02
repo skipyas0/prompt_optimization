@@ -76,8 +76,8 @@ def log_usage(log_file: str, input: str | tuple[str, str], output: str | float) 
     else:
         log_entry = {
             'type': "score",
-            'in': input[0],
-            'ground': input[1],
+            'ground': input[0],
+            'in': input[1],
             'out': output,
         }
 
@@ -114,7 +114,7 @@ def create_api_handles(api: OpenAIPredictor | NoneType, log_file: str, scorer: s
             ground = spl[1].strip()
 
         out = score_helper(ground, input)
-        log_usage(log_file, (input, ground), out)
+        log_usage(log_file, (ground, input), out)
         return out
     
     return usage_handle, score_handle
