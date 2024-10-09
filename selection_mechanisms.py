@@ -55,12 +55,12 @@ def filter_similar(population: list[Prompt], params: EvoParams) -> list[Prompt]:
     Deduplicate population based on a given similarity metric eg.: bert cosine similarity.
     """
     ix_to_pop = set()
-    print(f"Before {len(population)=}")
+    #print(f"Before {len(population)=}")
     # mark prompts that have a duplicate for removal
     for i, p1 in enumerate(population):
         for p2 in population[i+1:]:
              sim = params.similarity_scorer(str(p1), str(p2))
-             print(f"{str(p1)[:15]=} and {str(p2)[:15]=} have similarity {sim} -> {'popping' if sim > params.filter_th else 'keeping'}")
+             #print(f"{str(p1)[:15]=} and {str(p2)[:15]=} have similarity {sim} -> {'popping' if sim > params.filter_th else 'keeping'}")
              if sim > params.filter_th:
                   ix_to_pop.add(i)
                   break
@@ -68,5 +68,5 @@ def filter_similar(population: list[Prompt], params: EvoParams) -> list[Prompt]:
     # pop marked prompts
     for ix in sorted(list(ix_to_pop), reverse=True):
          population.pop(ix)
-    print(f"After {len(population)=}")
+    #print(f"After {len(population)=}")
     return population

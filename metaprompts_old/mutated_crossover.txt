@@ -2,12 +2,12 @@ Below you will find two sequences with similar meanings.
 Your task is to take ideas from both sequences and paraphrase them, so that you add novelty.
 Avoid using the same words as in the original sequences.
 
-<sequence1>
-{sequence1}
-</sequence1>
+Sequence 1:
+{}
+End of Sequence 1
 
-<sequence2>
-{sequence2}
-</sequence2>
-{style}
+Sequence 2:
+{}
+End of Sequence 2
+
 Resulting Sequence:

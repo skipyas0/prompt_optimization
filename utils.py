@@ -3,7 +3,7 @@ import re
 import json
 from vllm_api import OpenAIPredictor
 from types import NoneType
-from typing import Callable
+from typing import Callable, Literal
 import random 
 
 def load_log_dict(path: str) -> list[dict]:
@@ -27,7 +27,7 @@ def load_splits(ds_name: str, split: tuple[int, int, int]) -> tuple[Dataset, Dat
     test = ds.select(range(sum(split[:2]), sum(split)))
     return infer, train, test
 
-def join_dataset_to_str(dataset: Dataset, insertion_token: str) -> str:   
+def join_dataset_to_str(dataset: Dataset, insertion_token: str, insertion_position: Literal["prefix", "suffix"]) -> str:   
     """
     Join samples from datasets to single string with <in> <out> html-like tags.
     """
@@ -35,11 +35,15 @@ def join_dataset_to_str(dataset: Dataset, insertion_token: str) -> str:
     res = ""
 
     features = dataset.features
-    for sample in dataset:
-        res += insertion_token
-        for feature in features:
-            res += f"<{feature}> {sample[feature]} </{feature}>\n"
-        res += '\n'
+    q, a = features[0], features[1]
+
+    for i, sample in enumerate(dataset):
+        res += f"<{i}>\n"
+        res += insertion_token if insertion_position == "prefix" else "Follow these steps and solve the problem in a logical fashion.\n 1. Analyze the problem.\n 2. Create a plan to solve it.\n 3. Follow the plan and explain your steps.\n 4. Give your final answer.\n"
+        res += f"<{q}> {sample[q]} </{q}>\n"
+        res += insertion_token if insertion_position == "suffix" else "Let's think step by step.\n"
+        res += f"<{a}> {sample[a]} </{a}>\n"
+        res += f"</{i}>\n"
 
     return res
 

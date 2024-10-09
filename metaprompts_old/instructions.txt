@@ -1,0 +1,10 @@
+You are a coach capable of directing people to solve any task.
+Below are question and answer pairs pertaining to a task.
+Give specific and detailed instruction to a client looking to solve a task similar to these examples.
+Your instructions should maximize the likelihood of correct answers for similar questions.
+
+<examples>
+{}
+</examples>
+
+You are replacing <-INS-> with your answer. Get straight to the point.

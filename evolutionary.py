@@ -113,7 +113,7 @@ class EvolutionaryAlgorithm():
             self.population.append(new)
 
     def repopulate(self) -> None:
-        print(f"in repopulate, will add {self.params.mating_pool_size - self.pop_size}")
+        #print(f"in repopulate, will add {self.params.mating_pool_size - self.pop_size}")
         new_prompts = []
         for _ in range(self.params.mating_pool_size - self.pop_size):
             if self.pop_size < 1 or random.random() < self.params.repop_method_proportion:
@@ -128,7 +128,7 @@ class EvolutionaryAlgorithm():
         """
         Construct a new prompt specimen using metainstructions with task in/out examples.
         """
-        print("Creating fresh prompt")
+        #print("Creating fresh prompt")
         traits = []
         for tr in self.params.trait_ids:
             traits.append(self.task_specific_handles[tr]([self.params.examples_for_initial_generation]))
