@@ -1,8 +1,8 @@
 import argparse
 from evolutionary import EvoParams
-from utils import load_splits
+import utils
 from datasets import Dataset
-from types import NoneType
+from typing import Optional
 from vllm_api import OpenAIPredictor
 from local_api import LocalPredictor
 
@@ -33,6 +33,7 @@ def parse_args(log_file: str):
     parser.add_argument('--debug', action='store_true', help='Debug mode: No LLM, go through evolution with scrambling text and assigning random scores.')
     parser.add_argument('--filter_similar_method', type=str, choices=['None', 'bert', 'levenshtein'], default='None',help='How to filter prompts based on similarity. If not None, it is applied before selection mechanism.')
     parser.add_argument('--filter_th', type=float, default=0.95, help='Filtration threshold - prompts with higher similarity are deduplicated.')
+    parser.add_argument('--repop_method_proportion', type=float, default=1.0, help='Probability of using lamarckian mutation (creating fresh prompts like in initial population) instead of mutating remaining prompts when pop_size<mating_pool_size (too many prompts similarity-filtered).')
     args = parser.parse_args()
 
     if args.log:
@@ -43,7 +44,7 @@ def parse_args(log_file: str):
             f.write(dumps(vars(args)) + '\n')
     return args
 
-def parse_args_and_init(log_file: str) -> tuple[EvoParams, tuple[Dataset, Dataset, Dataset], OpenAIPredictor | NoneType]:
+def parse_args_and_init(log_file: str) -> tuple[EvoParams, tuple[Dataset, Dataset], Optional[OpenAIPredictor | LocalPredictor]]:
     """
     Parses CLI args and initialized parameters for evolutionary algorithm, dataset splits and OpenAI API object.
     """
@@ -65,12 +66,19 @@ def parse_args_and_init(log_file: str) -> tuple[EvoParams, tuple[Dataset, Datase
         combine_co_mut=args.combine_co_mut,
         scorer=args.scorer,
         filter_similar_method=args.filter_similar_method,
-        filter_th=args.filter_th
+        filter_th=args.filter_th,
+        repop_method_proportion=args.repop_method_proportion
     )
     if args.debug:
         api = None
     else:
         api = LocalPredictor(args.model, args.temp) if args.local else OpenAIPredictor(args.model, args.temp)
-    return evo_params, load_splits(args.ds, args.split), api
+
+    infer, train, eval_data = utils.load_splits(args.ds, args.split)
+
+    instruction_insertion_token = "<-INS->\n"
+    examples = utils.join_dataset_to_str(infer, instruction_insertion_token)
+    evo_params.examples_for_initial_generation = examples
+    return evo_params, (train, eval_data) ,api
 
     

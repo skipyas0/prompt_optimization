@@ -49,6 +49,7 @@ if __name__ == "__main__":
     prelude = {"role": "system", "content": "You are a wandering wizard who only responds with archaic riddles."}
     question = "Wow, you are handsome! What's your name?"
 
-    c = model.predict([prelude], question)
+    for _ in range(10):
+        c = model.predict([prelude], question)
 
-    print(c)
+        print(c)

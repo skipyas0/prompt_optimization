@@ -2,7 +2,8 @@ from prompt import Prompt
 from evolutionary import EvoParams
 import torch
 from random import sample
-from typing import Callable
+
+
 def rank_selection(population: list[Prompt], params: EvoParams) -> list[Prompt]:
         """
         Individuals are ranked based on their fitness, and selection is done based on rank.
@@ -41,22 +42,31 @@ def tournament_selection(population: list[Prompt], params: EvoParams) -> list[Pr
         mating_pool.append(group_winner)
     return mating_pool
 
-def filter_similar(population: list[Prompt], threshold: float, similarity_handle: Callable[[str, str], float]) -> list[Prompt]:
+def random_selection(population: list[Prompt], params: EvoParams) -> list[Prompt]:
+    """
+    Select individuals randomly, unrelated to their fitness.
+    """
+    mating_pool = sample(population, params.mating_pool_size)
+    
+    return mating_pool
+
+def filter_similar(population: list[Prompt], params: EvoParams) -> list[Prompt]:
     """
     Deduplicate population based on a given similarity metric eg.: bert cosine similarity.
     """
     ix_to_pop = set()
-
+    print(f"Before {len(population)=}")
     # mark prompts that have a duplicate for removal
     for i, p1 in enumerate(population):
-        for p2 in population[i:]:
-             sim = similarity_handle(p1, p2)
-             if sim > threshold:
+        for p2 in population[i+1:]:
+             sim = params.similarity_scorer(str(p1), str(p2))
+             print(f"{str(p1)[:15]=} and {str(p2)[:15]=} have similarity {sim} -> {'popping' if sim > params.filter_th else 'keeping'}")
+             if sim > params.filter_th:
                   ix_to_pop.add(i)
                   break
              
     # pop marked prompts
     for ix in sorted(list(ix_to_pop), reverse=True):
          population.pop(ix)
-
+    print(f"After {len(population)=}")
     return population

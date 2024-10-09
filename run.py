@@ -12,10 +12,7 @@ if __name__ == "__main__":
     log_file = f"logs/results/{ident}.ndjson"
 
     evo_params, splits, api = parse_args_and_init(log_file)
-    infer, train, eval_data = splits
-
-    instruction_insertion_token = "<-INS->\n"
-    examples = utils.join_dataset_to_str(infer, instruction_insertion_token)
+    train, eval_data = splits
     
     usage_handle, score_handle = utils.create_api_handles(api, log_file, evo_params.scorer)
     
@@ -27,9 +24,10 @@ if __name__ == "__main__":
     [[ANSWER]]
     </example>
     """
-    prompt_params = PromptParams(usage_handle, score_handle, log_file, evo_params.task_insert_ix, suffix)
+
+    evo_params.prompt_params = PromptParams(usage_handle, score_handle, log_file, evo_params.task_insert_ix, suffix)
     EA = EvolutionaryAlgorithm(evo_params, usage_handle, train)
-    EA.populate(prompt_params, examples)
+    EA.populate()
     EA.run()
 
     best_prompts = best_prompts_from_each_gen(EA.all_prompts)

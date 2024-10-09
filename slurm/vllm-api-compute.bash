@@ -3,8 +3,9 @@
 #SBATCH --nodes=1 --ntasks-per-node=1 --cpus-per-task=4
 #SBATCH --partition=amdgpufast --gres=gpu:2
 #SBATCH --mem=96G
-#SBATCH --out=/home/kloudvoj/devel/logs/vllm-api.%j.out
-
+#SBATCH --out=/home/kloudvoj/devel/prompt_optimalization/logs/slurm_out/vllm-api.%j.out
+#SBATCH --job-name model_test
+#SBATCH --mail-user=kloudvoj@fel.cvut.cz
 
 source "/home/kloudvoj/devel/prompt_optimalization/slurm/init_environment_vllm_amd.sh"
 
@@ -28,4 +29,4 @@ done
 
 # Now run code which uses the server
 #export PYTHONPATH=.:/home/drchajan/devel/python/FC/drchajan/src:/home/drchajan/devel/python/FC/fever-baselines/src:$PYTHONPATH
-python /home/kloudvoj/devel/vllm_api.py
+python /home/kloudvoj/devel/prompt_optimalization/vllm_api.py
