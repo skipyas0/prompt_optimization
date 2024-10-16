@@ -294,7 +294,8 @@ class EvolutionaryAlgorithm():
     
     @property
     def metapersona(self) -> str:
-        return random.choice(seed.manager_personas) if self.params.metapersonas else ""
+        personas = seed.manager_personas if random.random() < 0.5 else seed.solver_personas
+        return random.choice(personas) if self.params.metapersonas else ""
     
     @property
     def metastyle(self) -> str:    

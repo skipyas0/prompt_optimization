@@ -4,7 +4,8 @@ from datetime import datetime
 from os import getenv
 import utils
 from args import parse_args_and_init
-from data_evaluation import best_prompts_from_each_gen, evaluate_progression, plot_generations
+import data_evaluation as eval
+from prompt_templates import baseline_suffixes
 
 if __name__ == "__main__":
     ident = getenv("SLURM_JOB_ID") or datetime.now().strftime('%H-%M-%S_%d-%m-%Y')
@@ -23,13 +24,18 @@ if __name__ == "__main__":
     [[ANSWER]]
     </example>
     """
-
-    evo_params.prompt_params = PromptParams(usage_handle, score_handle, log_file, evo_params.task_insert_ix, suffix)
+    prompt_params = PromptParams(usage_handle, score_handle, log_file, evo_params.task_insert_ix, suffix)
+    evo_params.prompt_params = prompt_params
     EA = EvolutionaryAlgorithm(evo_params, usage_handle, train)
     EA.populate()
     EA.run()
 
-    best_prompts = best_prompts_from_each_gen(EA.all_prompts)
-    generation_scores = evaluate_progression(best_prompts, eval_data)
-    step_scores = evaluate_progression(EA.population_through_steps, eval_data)
-    plot_generations((generation_scores, step_scores), ident)
+    best_prompts = eval.best_prompts_from_each_gen(EA.all_prompts)
+    generation_scores = eval.evaluate_progression(best_prompts, eval_data)
+    step_scores = eval.evaluate_progression(EA.population_through_steps, eval_data)
+    
+    scores = {"Generation": generation_scores, "Steps": step_scores}
+    baseline_scores = {name: eval.calculate_baseline(eval_data, baseline, prompt_params) for name, baseline in baseline_suffixes.items()}
+    scores.update(baseline_scores)
+    
+    eval.plot_generations(scores, ident)

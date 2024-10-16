@@ -34,6 +34,9 @@ def parse_args(log_file: str):
     parser.add_argument('--filter_similar_method', type=str, choices=['None', 'bert', 'levenshtein', 'rouge'], default='None',help='How to filter prompts based on similarity. If not None, it is applied before selection mechanism.')
     parser.add_argument('--filter_th', type=float, default=0.95, help='Filtration threshold - prompts with higher similarity are deduplicated.')
     parser.add_argument('--repop_method_proportion', type=float, default=1.0, help='Probability of using lamarckian mutation (creating fresh prompts like in initial population) instead of mutating remaining prompts when pop_size<mating_pool_size (too many prompts similarity-filtered).')
+    parser.add_argument('--metapersonas', action='store_true', default=False, help='Choose a random metapersona to aid in prompt diversity.')
+    parser.add_argument('--metastyles', action='store_true', default=False, help='Add a random thinking/wording style to LLM calls to promote diversity.')
+
     args = parser.parse_args()
 
     if args.log:
@@ -67,7 +70,9 @@ def parse_args_and_init(log_file: str) -> tuple[EvoParams, tuple[Dataset, Datase
         scorer=args.scorer,
         filter_similar_method=args.filter_similar_method,
         filter_th=args.filter_th,
-        repop_method_proportion=args.repop_method_proportion
+        repop_method_proportion=args.repop_method_proportion,
+        metapersonas=args.metapersonas,
+        metastyles=args.metastyles
     )
     if args.debug:
         api = None

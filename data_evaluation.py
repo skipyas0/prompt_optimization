@@ -1,9 +1,10 @@
 import utils
 from datasets import Dataset
-from prompt import Prompt, PromptParams
+from prompt import Prompt, PromptParams, Trait
 import matplotlib.pyplot as plt
 from sys import argv
-from prompt_templates import baseline_suffixes
+import itertools
+
 def reconstruct_prompts(prompt_data: list[dict], prompt_params: PromptParams) -> list[Prompt]:
     """
     Select all dicts that represent a prompt and reconstruct them into objects
@@ -45,23 +46,32 @@ def evaluate_from_json(path: str, n_per_gen: int, prompt_params: PromptParams) -
     return evaluate_progression(best)
 
 
-def plot_generations(scores: tuple[list[float], list[float]], plot_path: str) -> None:
-    by_gen, by_step = scores
-    gens = range(1, len(by_gen) + 1)
-    steps = range(1, len(by_step) + 1)
-    # Create the plot
+def plot_generations(scores: dict[str, list[float]], plot_path: str) -> None:
     plt.figure()
-    plt.plot(gens, by_gen, marker='o', linestyle='-', color='b')
-    plt.plot(steps, by_step, marker='o', linestyle='-', color='r')
+    color_cycle = itertools.cycle(plt.cm.get_cmap('tab10').colors)
+
+    for name, values in scores.items():
+        color = next(color_cycle)
+        generations = range(1, len(values) + 1) 
+        if len(values) == 1:
+            plt.axhline(y=values[0], color=color, label=name, linestyle='--')
+        else:
+            plt.plot(generations, values, label=name, color=color)
+
     plt.xlabel('Generation')
     plt.ylabel('Fitness')
     plt.title('Evolution progress')
-
-    # Save the plot as a vector image (SVG)
+    
+    plt.legend()  
     plt.savefig(f'plots/{plot_path}.svg', format='svg')
 
-def calculate_baseline(eval_data: Dataset, baseline_prompt: Prompt) -> float:
-    pass
+def calculate_baseline(eval_data: Dataset, baseline_prompt: Prompt, prompt_params: PromptParams) -> list[float]:
+    """
+    Evaluate model performace on dataset using a baseline suffix prompt, such as "Let's think step by step."
+    """
+    trait = Trait(baseline_prompt, 'suffix', False)
+    prompt = Prompt([trait], prompt_params)
+    return [prompt.calculate_fitness(eval_data)]
 
 if __name__ == "__main__":
     from data_evaluation import evaluate_from_json
