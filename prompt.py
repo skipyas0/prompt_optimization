@@ -1,8 +1,24 @@
 from __future__ import annotations
-from typing import Callable
+from typing import Callable, Literal
 from random import randint
 from datasets import Dataset
 import json
+
+class Trait:
+    def __init__(self, text: str = "", position: Literal['prefix', 'suffix'] = 'prefix', evolved: bool = True) -> None:
+        self.text = text
+        self.position = position
+        self.evolved = evolved
+
+    def __str__(self) -> str:
+        return self.text
+
+    def copy(self) -> Trait:
+        return Trait(
+            self.text,
+            self.position,
+            self.evolved
+        )
 
 class PromptParams():
     def __init__(self, usage_handle: Callable[[str], str], evalutation_handle: Callable[[str, str], float], log_file: str, task_insert_index: int, prompt_suffix: str) -> None:
@@ -13,7 +29,7 @@ class PromptParams():
         self.prompt_suffix = prompt_suffix
 
 class Prompt():
-    def __init__(self, traits: list[str] | dict, params: PromptParams) -> None: 
+    def __init__(self, traits: list[Trait] | dict, params: PromptParams) -> None: 
         if isinstance(traits, dict):   
             self.params = params
             self.traits = traits['traits']
@@ -34,20 +50,25 @@ class Prompt():
             self.result = ["",""]
             self.id = randint(10000000, 99999999)
             self.parent_ids = []
+        self.bert_embedding = None
+
+    def prefix_part(self) -> str:
+        return '\n'.join(map(str, filter(lambda x: x.position == 'prefix', self.traits)))
     
+    def suffix_part(self) -> str:
+        return '\n'.join(map(str, filter(lambda x: x.position == 'suffix', self.traits)))
+
     def format(self, task: str) -> str:
         """
         Insert task in the prompt template and output the complete prompt
         """
-        ix = self.params.task_insert_index
-        return '\n'.join(self.traits[:ix]) + '\n<task>\n' + task +'\n</task>\n' + '\n'.join(self.traits[ix:]) 
+        return self.prefix_part() + '\n<task>\n' + task +'\n</task>\n' + self.suffix_part() 
     
     def __str__(self) -> str:
         """
-        Generate formattable string from prompt traits.
+        Join prompt traits into a formattale string
         """
-        ix = self.params.task_insert_index
-        return '\n'.join(self.traits[:ix]) + '\n<task>\n{}\n</task>\n' + '\n'.join(self.traits[ix:]) 
+        return self.prefix_part() + '\n<task>\n{}\n</task>\n' + self.suffix_part()
 
     def calculate_fitness(self, batch: Dataset) -> float:
         """
@@ -61,7 +82,7 @@ class Prompt():
         return self.fitness
 
     def copy(self) -> Prompt:
-        new = Prompt(self.traits.copy(), self.params)
+        new = Prompt([trait.copy() for trait in self.traits], self.params)
         new.generation_number = self.generation_number
         new.fitness = self.fitness
         new.best_fitness = self.best_fitness
@@ -78,10 +99,11 @@ class Prompt():
             'id': self.id,
             'parent_ids': self.parent_ids,
             'generation': self.generation_number,
-            'traits': self.traits,
+            'traits': [(x.text, x.position, x.evolved) for x in self.traits],
             'avg_fitness': self.fitness,
             'best_task_result': self.result,
-            'best_fitness': self.best_fitness
+            'best_fitness': self.best_fitness,
+            #'bert_embedding': self.bert_embedding
         }
         with open(self.params.log_file, 'a') as f:
             f.write(json.dumps(log_entry) + '\n')

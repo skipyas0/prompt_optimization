@@ -5,14 +5,14 @@ from random import sample
 
 
 def rank_selection(population: list[Prompt], params: EvoParams) -> list[Prompt]:
-        """
-        Individuals are ranked based on their fitness, and selection is done based on rank.
-        """
-        mating_pool = sorted(population, 
-                     key=lambda s: s.fitness, 
-                     reverse=True)[:params.mating_pool_size]
-        
-        return mating_pool
+    """
+    Individuals are ranked based on their fitness, and selection is done based on rank.
+    """
+    mating_pool = sorted(population, 
+                    key=lambda s: s.fitness, 
+                    reverse=True)[:params.mating_pool_size]
+    
+    return mating_pool
         
     
 def roulette_selection(population: list[Prompt], params: EvoParams) -> list[Prompt]:
@@ -59,7 +59,7 @@ def filter_similar(population: list[Prompt], params: EvoParams) -> list[Prompt]:
     # mark prompts that have a duplicate for removal
     for i, p1 in enumerate(population):
         for p2 in population[i+1:]:
-             sim = params.similarity_scorer(str(p1), str(p2))
+             sim = params.similarity_scorer(p1, p2)
              #print(f"{str(p1)[:15]=} and {str(p2)[:15]=} have similarity {sim} -> {'popping' if sim > params.filter_th else 'keeping'}")
              if sim > params.filter_th:
                   ix_to_pop.add(i)

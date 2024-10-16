@@ -1,8 +1,9 @@
 import utils
 from datasets import Dataset
 from prompt import Prompt, PromptParams
-
-
+import matplotlib.pyplot as plt
+from sys import argv
+from prompt_templates import baseline_suffixes
 def reconstruct_prompts(prompt_data: list[dict], prompt_params: PromptParams) -> list[Prompt]:
     """
     Select all dicts that represent a prompt and reconstruct them into objects
@@ -42,3 +43,28 @@ def evaluate_from_json(path: str, n_per_gen: int, prompt_params: PromptParams) -
     prompts = reconstruct_prompts(json, prompt_params)
     best = best_prompts_from_each_gen(prompts, n_per_gen)
     return evaluate_progression(best)
+
+
+def plot_generations(scores: tuple[list[float], list[float]], plot_path: str) -> None:
+    by_gen, by_step = scores
+    gens = range(1, len(by_gen) + 1)
+    steps = range(1, len(by_step) + 1)
+    # Create the plot
+    plt.figure()
+    plt.plot(gens, by_gen, marker='o', linestyle='-', color='b')
+    plt.plot(steps, by_step, marker='o', linestyle='-', color='r')
+    plt.xlabel('Generation')
+    plt.ylabel('Fitness')
+    plt.title('Evolution progress')
+
+    # Save the plot as a vector image (SVG)
+    plt.savefig(f'plots/{plot_path}.svg', format='svg')
+
+def calculate_baseline(eval_data: Dataset, baseline_prompt: Prompt) -> float:
+    pass
+
+if __name__ == "__main__":
+    from data_evaluation import evaluate_from_json
+    slurm_id = argv[1]
+    n_best_from_gen = 3
+    scores = evaluate_from_json(f"{slurm_id}.ndjson", n_best_from_gen)

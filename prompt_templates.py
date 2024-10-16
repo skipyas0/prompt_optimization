@@ -1,112 +1,88 @@
-baseline_suffixes = [
-    "",
-    "Let's think step by step."  # Kojima et al. 2022
-    "Let's work this out in a step by step way to be sure we have the right answer."  # Zhou et al. 2022b
-    "SOLUTION:",  # Fernando et al. 2023
-]
+from typing import Optional
 
-prompt_suffix_for_usage = """
-    After your explanation, make sure you put your final answer in two pairs of square brackets.
-    <example>
-    ...
-    And for the above reasons, the solution is ANSWER.
-    [[ANSWER]]
-    </example>
-    """
+baseline_suffixes = {
+    "Blank": "{}",
+    "Kojima": "{}\nLet's think step by step.",  # Kojima et al. 2022
+    "Zhou": "{}\nLet's work this out in a step by step way to be sure we have the right answer.",  # Zhou et al. 2022b
+    "Fernando": "{}\nSOLUTION:",  # Fernando et al. 2023
+}
 
-metaprompts = {
-    "static": {
-        "crossover": 
-"""Below you will find two sequences. 
-Your task is to identify important aspects of both sequences and then combine them so that the resulting sequence captures the meaning of both sequence.
-Sequence 1:
-{}
-End of Sequence 1
-Sequence 2:
-{}
-End of Sequence 2
-Resulting Sequence:""",
+class Metaprompt:
+    def __init__(self, task: str, text: str, formatting_identifiers: list[str]) -> None:
+        self.text = text
+        self.task = task
+        self.formatting_identifiers = formatting_identifiers
 
-        "de1": """
-    Below you will find two sequences.
-Your task is to identify important parts of both sentences in which they differ.
-Output these differing parts as a list of comma-seperated words.
+    def __str__(self) -> str:
+        return self.text
+    
+    def format(self, replace: dict[str, str]) -> Optional[str]:
+        if list(replace.keys()) == self.formatting_identifiers:
+            return str(self).format(**replace)
+        return None
+    
+instructions = Metaprompt(
+    task="instructions",
+    text="""{metapersona}Your mission is to generate instructions for a generic task given a few examples of input/output pairs.
+<examples>
+{examples}
+</examples>
+Substitute the <-INS-> tag with your generated instructions. 
+Pay attention to the tag's location in the example.
+Try to be as concise as possible.
+{metastyle}Generated instructions:""",
+    formatting_identifiers=["metapersona", "examples", "metastyle"]
+)
 
-Sequence 1:
-{}
-End of Sequence 1
-
-Sequence 2:
-{}
-End of Sequence 2
-
-Resulting Sequence:
-    """,
-        "de2": """
-    Below you will find a sequence of comma-seperated words.
-Your tasks is to mutate each word - find good synonyms.
-Output them as a list of comma-seperated values.
-
-Sequence 1:
-{}
-End of Sequence 1
-
-Resulting Sequence:
-    """,
-        "de3": """
-    Below you will find two sequences.
-Sequence 1 is a list of words seperated by commas.
-Your task is to take those words and encorporate them into Sequence 2.
-Add the meaning of the words to the original sequence.
-
-Sequence 1
-{}
-End of Sequence 1
-
-Sequence 2
-{}
-End of Sequence 2
-
-Resulting Sequence:
-    """,
-        "instructions": """
-    You are a coach capable of directing people to solve any task.
-Below are question and answer pairs pertaining to a task.
-Give specific and detailed instruction to a client looking to solve a task similar to these examples.
-Your instructions should maximize the likelihood of correct answers for similar questions.
-
-Examples
-{}
-End of examples
-
-You are replacing <-INS-> with your answer. Get straight to the point.
-    """,
-        "mutated_crossover": """
-    Below you will find two sequences with similar meanings. 
+mutated_crossover = Metaprompt(
+    task="mutated_crossover",
+    text="""Below you will find two sequences with similar meanings. 
 Your task is to take ideas from both sequences and paraphrase them, so that you add novelty.
 Avoid using the same words as in the original sequences.
 
-Sequence 1:
-{}
-End of Sequence 1
+<sequence1>
+{sequence1}
+</sequence1>
 
-Sequence 2:
-{}
-End of Sequence 2
+<sequence2>
+{sequence2}
+</sequence2>
+{metastyle}Resulting Sequence:""",
+    formatting_identifiers=["sequence1", "sequence2", "metastyle"]
+)
 
-Resulting Sequence:
-    """,
-        "mutation": """
-    Below you will find a sequence. 
+mutation = Metaprompt(
+    task="mutation",
+    text="""Below you will find a sequence. 
 Your task is to mutate it - change it, for example by choosing fitting synonyms.
 Conserve the original meaning.
 
-Sequence
-{}
-End of Sequence
+<sequence>
+{sequence}
+</sequence>
+{metastyle}Resulting Sequence:""",
+    formatting_identifiers=["sequence", "metastyle"]
+)
 
-Resulting Sequence:
-    """,
-    },
-    "seeded": {},
-}
+crossover = Metaprompt(
+    task="crossover",
+    text="""Below you will find two sequences. 
+Your task is to identify important aspects of both sequences and then combine them so that the resulting sequence captures the meaning of both sequence.
+
+<sequence1>
+{sequence1}
+</sequence1>
+
+<sequence2>
+{sequence2}
+</sequence2>
+{metastyle}Resulting Sequence:""",
+    formatting_identifiers=["sequence1", "sequence2", "metastyle"]
+)
+
+metaprompts = [
+    instructions,
+    mutated_crossover,
+    mutation,
+    crossover
+]

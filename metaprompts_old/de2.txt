@@ -1,9 +1,0 @@
-Below you will find a sequence of comma-seperated words.
-Your tasks is to mutate each word - find good synonyms.
-Output them as a list of comma-seperated values.
-
-Sequence 1:
-{}
-End of Sequence 1
-
-Resulting Sequence:

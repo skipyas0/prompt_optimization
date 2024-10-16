@@ -2,8 +2,7 @@ from datasets import load_dataset, Dataset
 import re
 import json
 from vllm_api import OpenAIPredictor
-from types import NoneType
-from typing import Callable, Literal
+from typing import Callable, Literal, Optional
 import random 
 
 def load_log_dict(path: str) -> list[dict]:
@@ -27,14 +26,14 @@ def load_splits(ds_name: str, split: tuple[int, int, int]) -> tuple[Dataset, Dat
     test = ds.select(range(sum(split[:2]), sum(split)))
     return infer, train, test
 
-def join_dataset_to_str(dataset: Dataset, insertion_token: str, insertion_position: Literal["prefix", "suffix"]) -> str:   
+def join_dataset_to_str(dataset: Dataset, insertion_token: str, insertion_position: Literal["prefix", "suffix"] = "prefix") -> str:   
     """
     Join samples from datasets to single string with <in> <out> html-like tags.
     """
 
     res = ""
 
-    features = dataset.features
+    features = list(dataset.features.keys())
     q, a = features[0], features[1]
 
     for i, sample in enumerate(dataset):
@@ -88,7 +87,7 @@ def log_usage(log_file: str, input: str | tuple[str, str], output: str | float) 
     with open(log_file, 'a') as f:
         f.write(json.dumps(log_entry) + '\n')
 
-def create_api_handles(api: OpenAIPredictor | NoneType, log_file: str, scorer: str) -> tuple[Callable[[str], str], Callable[[str], float]]:
+def create_api_handles(api: Optional[OpenAIPredictor], log_file: str, scorer: str) -> tuple[Callable[[str], str], Callable[[str], float]]:
     if api is None:
         #fast debug to replace LLM calls 
         def scramble(input: str, _: int = 0) -> str:
@@ -98,12 +97,12 @@ def create_api_handles(api: OpenAIPredictor | NoneType, log_file: str, scorer: s
         usage_helper = scramble
         score_helper = lambda _0, _1: random.random()
     else:
-        import evaluators as ev
+        import fitness_functions as ff
         usage_helper = lambda prompt: api.predict(question=prompt)
         if scorer == "ask_llm_to_compare":
-            score_helper = lambda ground, x: ev.ask_llm_to_compare(ground, x, usage_handle)
+            score_helper = lambda ground, x: ff.ask_llm_to_compare(ground, x, usage_handle)
         elif scorer == "binary_match":
-            score_helper = lambda ground, x: ev.binary_match(ground, x)
+            score_helper = lambda ground, x: ff.binary_match(ground, x)
 
     def usage_handle(input: str) -> str:
         out = usage_helper(input)

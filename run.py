@@ -4,8 +4,7 @@ from datetime import datetime
 from os import getenv
 import utils
 from args import parse_args_and_init
-from reconstruct import best_prompts_from_each_gen, evaluate_progression
-from visualization import plot_generations
+from data_evaluation import best_prompts_from_each_gen, evaluate_progression, plot_generations
 
 if __name__ == "__main__":
     ident = getenv("SLURM_JOB_ID") or datetime.now().strftime('%H-%M-%S_%d-%m-%Y')
@@ -32,4 +31,5 @@ if __name__ == "__main__":
 
     best_prompts = best_prompts_from_each_gen(EA.all_prompts)
     generation_scores = evaluate_progression(best_prompts, eval_data)
-    plot_generations(generation_scores, ident)
+    step_scores = evaluate_progression(EA.population_through_steps, eval_data)
+    plot_generations((generation_scores, step_scores), ident)

@@ -1,11 +1,10 @@
 from __future__ import annotations
 import random
 from typing import Literal, Callable, Optional
-from prompt import Prompt, PromptParams
+from prompt import Prompt, PromptParams, Trait
 from datasets import Dataset
-import genetic_operators as op
 import os
-
+import prompt_seed_phrases as seed
 class EvoParams(): 
     """
     Collection of parameters for evolutionary algorithm
@@ -19,7 +18,7 @@ class EvoParams():
                  prompt_mutation_probability: float=1.0,
                  trait_mutation_percentage: float=1.0,
                  max_iters: int=100,
-                 evolution_mode: Literal['GA','DE']='GA',
+                 evolution_mode: Literal['GA']='GA',
                  selection_mode: Literal['rank', 'roulette', 'tournament']='rank',
                  tournament_group_size: int=3,
                  train_batch_size: int=5,
@@ -29,7 +28,9 @@ class EvoParams():
                  filter_similar_method: str = "None",
                  filter_th: float = 0.95,
                  examples_for_initial_generation: str = "",
-                 repop_method_proportion: float = 1.0)-> None:
+                 repop_method_proportion: float = 1.0,
+                 metapersonas: bool = False,
+                 metastyles: bool = False)-> None:
         self.initial_population_size = initial_population_size
         self.population_change_rate = population_change_rate
         self.mating_pool_size = mating_pool_size
@@ -50,26 +51,30 @@ class EvoParams():
         self.filter_similar_method=filter_similar_method
         self.filter_th=filter_th
         self.examples_for_initial_generation = examples_for_initial_generation
+        self.bert = None
         self.similarity_scorer = self.get_similarity_scoring_handle()
         self.repop_method_proportion=repop_method_proportion
         self.prompt_params: Optional[PromptParams]=None
+        self.metapersonas = metapersonas
+        self.metastyles = metastyles
+        
 
-    def get_similarity_scoring_handle(self) -> Optional[Callable[[str, str], float]]:
+    def get_similarity_scoring_handle(self) -> Optional[Callable[[Prompt, Prompt], float]]:
         """
         Instantiate a handle for the text comparison method specified in params.
         """
         fsm = self.filter_similar_method
         if fsm == 'bert':
             from bert import Bert
-            b = Bert()
-            return b.bert_cosine_similarity
+            self.bert = Bert()
+            return lambda a, b: self.bert.cos_sim_precalc(a.bert_embedding, b.bert_embedding)
         if fsm == 'rouge':
             from rouge_score import rouge_scorer
             scorer = rouge_scorer.RougeScorer(['rougeL'], use_stemmer=True)
-            return lambda a,b: scorer.score(a,b)["rougeL"].fmeasure
+            return lambda a,b: scorer.score(str(a),str(b))["rougeL"].fmeasure
         if fsm == 'levenshtein':
             from Levenshtein import ratio
-            return ratio
+            return lambda a,b: ratio(str(a), str(b))
         return None
 
 import selection_mechanisms as sm
@@ -82,27 +87,27 @@ class EvolutionaryAlgorithm():
     def __init__(self, params: EvoParams, generation_handle: Callable[[str], str], tasks: Dataset) -> None:
         assert params.prompt_params, "Initialize EvoParams.prompt_params with PromptParams object before use."
         self.population: list[Prompt] = []
-        self.all_prompts: list[Prompt] = []
+        self.population_through_steps: list[list[Prompt]] = []
         self.params = params
         self.target_pop_size = self.params.initial_population_size
         
-        # !!! important !!! handles only accept list of strings
-        # necessary for formatting into prompt templates -> asterisk unwrapper
-        self.task_specific_handles: dict[str, Callable[[list[str]], str]] = dict() 
+        # !!! important !!! handles only accept dicts of type str (formatting identifier) -> str (formatting content)
+        # necessary for formatting into prompt templates - kwargs unwrapper
+        self.task_specific_handles: dict[str, Callable[[dict[str, str]], str]] = dict() 
 
         self.gen = generation_handle 
         self.tasks = tasks
         self.load_instructions()
         
-        self.step = self.ga_step if self.params.evolution_mode=='GA' else self.de_step
+        self.step = self.ga_step if self.params.evolution_mode=='GA' else None
 
     def run(self) -> None:
         """
         Run EvolutionaryAlgorithm to max iterations.
         """
-        for _ in range(self.params.max_iters):
+        for i in range(self.params.max_iters):
             self.step()
-            self.all_prompts += self.population
+            self.population_through_steps.append(self.population)
 
     def populate(self) -> None:
         """
@@ -128,12 +133,22 @@ class EvolutionaryAlgorithm():
         """
         Construct a new prompt specimen using metainstructions with task in/out examples.
         """
-        #print("Creating fresh prompt")
+
         traits = []
         for tr in self.params.trait_ids:
-            traits.append(self.task_specific_handles[tr]([self.params.examples_for_initial_generation]))
-        
-        return Prompt(traits, self.params.prompt_params)
+            trait_text = self.task_specific_handles[tr]({
+                "metapersona": self.metapersona,
+                "examples": self.params.examples_for_initial_generation,
+                "metastyle": self.metastyle
+            })
+
+            traits.append(Trait(
+                trait_text
+            ))
+        res = Prompt(traits, self.params.prompt_params)
+        if self.params.filter_similar_method == 'bert':
+            res.bert_embedding = self.params.bert.get_bert_embedding(str(res))
+        return res
     
     def create_prompt_mutate_from_template(self, template: Prompt) -> Prompt:
         """
@@ -141,8 +156,10 @@ class EvolutionaryAlgorithm():
         """
 
         res = template.copy()
-        op.mutate(res, self.task_specific_handles["mutation"])
+        self.mutate(res)
         res.parent_ids = [template.id]
+        if self.params.filter_similar_method == 'bert':
+            res.bert_embedding = self.params.bert.get_bert_embedding(str(res))
         return res
 
     def ga_step(self) -> None:
@@ -158,13 +175,15 @@ class EvolutionaryAlgorithm():
             i1, i2 = random.sample(lotto, 2)
             s1, s2 = self.population[i1], self.population[i2]
 
-            if self.params.combine_co_mut:
-                res = op.crossover(s1, s2, self.task_specific_handles['mutated_crossover'])
-            else:
-                res = op.crossover(s1, s2, self.task_specific_handles['crossover'])
+            res = self.crossover(s1, s2)
+
+            if not self.params.combine_co_mut:
+                # Crossover and mutation happen separately
                 if random.random() < self.params.prompt_mutation_probability:
-                    op.mutate(res, self.task_specific_handles['mutation'])
-            
+                        self.mutate(res)
+
+            if self.params.filter_similar_method == 'bert':
+                res.bert_embedding = self.params.bert.get_bert_embedding(str(res))
             offsprings.append(res)
 
         self.population += offsprings
@@ -172,32 +191,7 @@ class EvolutionaryAlgorithm():
         self.target_pop_size = max(self.params.mating_pool_size,
                             self.target_pop_size + self.params.population_change_rate)
 
-    def de_step(self) -> None:
-        """
-        One step of Differential Evolution.
-        """
-        selected_prompts = self.selection()
-
-        handles = tuple(self.task_specific_handles[s] for s in ['de1', 'de2', 'de3'])
-
-        basic = selected_prompts[-1]
-        lotto = range(self.params.mating_pool_size - 1)
-        offsprings = []
-        while len(self.population) + len(offsprings) < self.target_pop_size:
-            # New offspring is Crossover(Mutate(s1 - s2) + s3, basic)
-            i1, i2, i3 = random.sample(lotto, 3)
-            prompts = (self.population[i1], self.population[i2], self.population[i3], basic)
-            res = op.de_combination(prompts, handles)
-
-            offsprings.append(res)
-
-        self.population += offsprings
-
-        # shuffle to make sure a random basic prompt is being chosen
-        random.shuffle(self.population)
-        self.target_pop_size = max(self.params.mating_pool_size,
-                            self.target_pop_size + self.params.population_change_rate)
-
+   
     def selection(self) -> list[Prompt]:
         """
         Perform given selection type to get new mating pool.
@@ -230,9 +224,41 @@ class EvolutionaryAlgorithm():
         """
         for prompt in to_be_mutated:
             if random.random() < self.params.prompt_mutation_probability:
-                op.mutate(prompt, self.task_specific_handles['mutation'])
-                
-    def load_instructions(self) -> None:
+                self.mutate(prompt)
+    
+    def mutate(self, prompt: Prompt) -> None:
+        """
+        In-place mutation of prompt trait-by-trait.
+        """
+        
+        for ix, trait in enumerate(prompt.traits):
+            prompt.traits[ix].text = self.task_specific_handles['mutation']({
+                "sequence": trait,
+                "metastyle": self.metastyle
+            })
+
+    def crossover(self, prompt1: Prompt, prompt2: Prompt) -> Prompt:
+        """
+        Create an offspring by combining this prompt's traits with other prompt
+        """
+        assert prompt1.n_traits == prompt2.n_traits
+        template_name = "mutated_crossover" if self.params.combine_co_mut else "crossover"
+        
+        id1 = prompt1.id
+        res = prompt1.copy()
+        for ix in range(res.n_traits):
+            t1, t2 = res.traits[ix], prompt2.traits[ix]
+            res.traits[ix].text = self.task_specific_handles[template_name]({
+                "sequence1": t1,
+                "sequence2": t2,
+                "metastyle": self.metastyle
+            })
+
+        res.parent_ids = [id1, prompt2.id]
+        res.generation_number += 1
+        return res
+
+    def load_instructions_files(self) -> None:
         """
         Access prewritten instructions to be used in genetic operators.
         """
@@ -245,14 +271,42 @@ class EvolutionaryAlgorithm():
 
                 # Store a handle to be used with 1 or 2 prompt-traits
                 # Unpack them and format them into the instruction template - it has 1 or 2 {} brackets for formatting
-                def handle(s: list[str], instructions=instructions) -> str:
-                    prompt = instructions.format(*s)
+                def handle(s: dict[str, str], instructions=instructions) -> str:
+                    prompt = instructions.format(*list(s.values()))
                     return self.gen(prompt)
                  
                 self.task_specific_handles[op_name] = handle
 
         assert len(self.task_specific_handles.keys()) == len(os.listdir(path))
 
+    def load_instructions(self) -> None:
+        """
+        Access prewritten instructions to be used in genetic operators.
+        """
+        from prompt_templates import metaprompts
+
+        for mp in metaprompts:
+            def handle(s: dict[str, str], metaprompt=mp) -> str:
+                prompt = metaprompt.format(s)
+                return self.gen(prompt)
+            
+            self.task_specific_handles[mp.task] = handle
+    
+    @property
+    def metapersona(self) -> str:
+        return random.choice(seed.manager_personas) if self.params.metapersonas else ""
+    
+    @property
+    def metastyle(self) -> str:    
+        return random.choice(seed.wording_styles) if self.params.metastyles else ""
+
     @property
     def pop_size(self) -> int:
         return len(self.population)
+
+    @property
+    def all_prompts(self) -> list[Prompt]:
+        """
+        Flatten 2d population through steps into single list.
+        """
+        return [prompt for step_pop in self.population_through_steps for prompt in step_pop]

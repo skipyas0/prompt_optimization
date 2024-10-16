@@ -1,8 +1,0 @@
-{metapersona}Your mission is to generate instructions for a generic task given a few examples of input/output pairs.
-<examples>
-{examples}
-</examples>
-Substitute the <-INS-> tag with your generated instructions. 
-Pay attention to the tag's location in the example.
-Try to be as concise as possible.
-{style}Generated instructions:

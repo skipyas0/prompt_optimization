@@ -9,9 +9,9 @@ Calls are done with OpenAI API to a VLLM server.
 Batch scripts in slurm folder.
 Mandatory argument: model
 Example:
-'''
+```
 sbatch slurm/run_on_vllm_amdgpufast.bash "microsoft/Phi-3.5-mini-instruct" --initial_population_size 10
-'''
+```
 
 Debug mode: *python run.py --debug*
 
