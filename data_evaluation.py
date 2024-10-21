@@ -4,7 +4,7 @@ from prompt import Prompt, PromptParams, Trait
 import matplotlib.pyplot as plt
 from sys import argv
 import itertools
-
+from stats import stats
 def reconstruct_prompts(prompt_data: list[dict], prompt_params: PromptParams) -> list[Prompt]:
     """
     Select all dicts that represent a prompt and reconstruct them into objects
@@ -46,7 +46,7 @@ def evaluate_from_json(path: str, n_per_gen: int, prompt_params: PromptParams) -
     return evaluate_progression(best)
 
 
-def plot_generations(scores: dict[str, list[float]], plot_path: str) -> None:
+def plot_generations(scores: dict[str, list[float]], ident: str, file_name:str) -> None:
     plt.figure()
     color_cycle = itertools.cycle(plt.cm.get_cmap('tab10').colors)
 
@@ -63,7 +63,23 @@ def plot_generations(scores: dict[str, list[float]], plot_path: str) -> None:
     plt.title('Evolution progress')
     
     plt.legend()  
-    plt.savefig(f'plots/{plot_path}.svg', format='svg')
+    plt.savefig(f'plots/{ident}/{file_name}.svg', format='svg')
+
+def plot_training_stats(ident: str) -> None:
+    color_cycle = itertools.cycle(plt.cm.get_cmap('tab10').colors)
+
+    for name, values in stats.get_averages().items():
+        plt.figure()
+        color = next(color_cycle)
+        generations = range(1, len(values) + 1) 
+        plt.plot(generations, values, label=name, color=color)
+
+        plt.xlabel('Generation')
+        plt.ylabel('Fitness')
+        plt.title('Evolution progress')
+        
+        plt.legend()  
+        plt.savefig(f'plots/{ident}/{name}.svg', format='svg')
 
 def calculate_baseline(eval_data: Dataset, baseline_prompt: Prompt, prompt_params: PromptParams) -> list[float]:
     """

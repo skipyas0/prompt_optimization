@@ -5,7 +5,7 @@ from prompt import Prompt, PromptParams, Trait
 from datasets import Dataset
 import prompt_seed_phrases as seed
 import metaprompt as mp
-
+from stats import stats
 class EvoParams(): 
     """
     Collection of parameters for evolutionary algorithm
@@ -95,12 +95,13 @@ class EvolutionaryAlgorithm():
         self.gen = generation_handle 
         self.tasks = tasks
         self.step = self.ga_step if self.params.evolution_mode=='GA' else None
-
+        
     def run(self) -> None:
         """
         Run EvolutionaryAlgorithm to max iterations.
         """
         for i in range(self.params.max_iters):
+            stats.start_step()
             self.step()
             self.population_through_steps.append(self.population)
 
@@ -146,6 +147,8 @@ class EvolutionaryAlgorithm():
         res = Prompt(traits, self.params.prompt_params)
         if self.params.filter_similar_method == 'bert':
             res.bert_embedding = self.params.bert.get_bert_embedding(str(res))
+
+        stats.add_to_current_step({"lammarck": 1})
         return res
     
     def create_prompt_mutate_from_template(self, template: Prompt) -> Prompt:

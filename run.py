@@ -1,10 +1,12 @@
 from evolutionary import EvolutionaryAlgorithm
 from prompt import PromptParams
 from datetime import datetime
-from os import getenv
+from os import getenv, mkdir
 import utils
 from args import parse_args_and_init
 import data_evaluation as eval
+from stats import stats
+
 if __name__ == "__main__":
     ident = getenv("SLURM_JOB_ID") or datetime.now().strftime('%H-%M-%S_%d-%m-%Y')
     log_file = f"logs/results/{ident}.ndjson"
@@ -31,8 +33,14 @@ if __name__ == "__main__":
         "Fernando": "{}\nSOLUTION:",  # Fernando et al. 2023
     }
     
-    scores = {"Generation": generation_scores, "Steps": step_scores}
+    scores_gen = {"Generation": generation_scores}
+    scores_steps= {"Steps": step_scores}
     baseline_scores = {name: eval.calculate_baseline(eval_data, baseline, prompt_params) for name, baseline in baseline_suffixes.items()}
-    scores.update(baseline_scores)
-    
-    eval.plot_generations(scores, ident)
+    scores_gen.update(baseline_scores)
+    scores_steps.update(baseline_scores)
+
+    mkdir(f"plots/{ident}")
+    eval.plot_generations(scores_gen, ident, "generations")
+    eval.plot_generations(scores_steps, ident, "steps")
+    eval.plot_training_stats(ident)
+    print(stats)

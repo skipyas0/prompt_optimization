@@ -4,14 +4,13 @@ from random import randint
 from datasets import Dataset
 import json
 import metaprompt
-
+from stats import stats
 universal_suffix = """After your explanation, make sure you put your final answer in two pairs of square brackets.
-        <example>
-        ...
-        And for the above reasons, the solution is ANSWER.
-        [[ANSWER]]
-        </example>
-    """
+<example>
+...
+And for the above reasons, the solution is ANSWER.
+[[ANSWER]]
+</example>"""
 
 
 class Trait:
@@ -60,6 +59,8 @@ class Prompt():
             self.id = randint(10000000, 99999999)
             self.parent_ids = []
         self.bert_embedding = None
+        self.maximum_similarity = 0
+        self.average_similarity = 0
 
     def prefix_part(self) -> str:
         return '\n'.join(map(str, filter(lambda x: x.position == 'prefix', self.traits)))
@@ -96,6 +97,7 @@ class Prompt():
         fitness_scores = [self.params.evaluation_handle(ground, gen) for ground, gen in zip(ground_truths, results)]
         self.best_fitness, self.result = max(zip(fitness_scores, results)) # save result with best performance on 
         self.fitness = sum(fitness_scores) / len(fitness_scores)
+        stats.append_to_current_step({"training_fitness": self.fitness})
         return self.fitness
 
     def copy(self) -> Prompt:
@@ -107,6 +109,7 @@ class Prompt():
         new.parent_ids = self.parent_ids
         return new
     
+        
     def log(self) -> None:
         """
         Add entry about self to .ndjson defined in PromptParams.
@@ -120,6 +123,8 @@ class Prompt():
             'avg_fitness': self.fitness,
             'best_task_result': self.result,
             'best_fitness': self.best_fitness,
+            'average_similarity': self.average_similarity,
+            'maximum_similarity': self.maximum_similarity
             #'bert_embedding': self.bert_embedding
         }
         with open(self.params.log_file, 'a') as f:

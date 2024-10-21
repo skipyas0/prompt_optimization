@@ -3,11 +3,11 @@
 #SBATCH --nodes=1 --ntasks-per-node=1 --cpus-per-task=4
 #SBATCH --partition=amdgpufast --gres=gpu:2
 #SBATCH --mem=96G
-#SBATCH --out=/home/kloudvoj/devel/prompt_optimalization/logs/slurm_out/vllm-api.%j.out
+#SBATCH --out=/home/kloudvoj/devel/prompt_optimization/logs/slurm_out/vllm-api.%j.out
 #SBATCH --job-name model_test
 #SBATCH --mail-user=kloudvoj@fel.cvut.cz
 
-source "/home/kloudvoj/devel/prompt_optimalization/slurm/init_environment_vllm_amd.sh"
+source "/home/kloudvoj/devel/prompt_optimization/slurm/init_environment_vllm_amd.sh"
 
 # First run the VLLM server, so we can use OpenAI API
 # output redirection however does not work well...
@@ -16,7 +16,7 @@ source "/home/kloudvoj/devel/prompt_optimalization/slurm/init_environment_vllm_a
 export VLLM_MY_PORT=$(shuf -i8000-8999 -n1)
 echo "VLLM_MY_PORT=${VLLM_MY_PORT}"
 export VLLM_LOG="/home/kloudvoj/devel/logs/vllm-api.$SLURM_JOB_ID.vllm_server.out"
-nohup /home/kloudvoj/devel/prompt_optimalization/slurm/vllm-serve.bash 2>&1 > "$VLLM_LOG" &
+nohup /home/kloudvoj/devel/prompt_optimization/slurm/vllm-serve.bash 2>&1 > "$VLLM_LOG" &
 
 # Wait for VLLM server startup
 check_substring() {
@@ -29,4 +29,4 @@ done
 
 # Now run code which uses the server
 #export PYTHONPATH=.:/home/drchajan/devel/python/FC/drchajan/src:/home/drchajan/devel/python/FC/fever-baselines/src:$PYTHONPATH
-python /home/kloudvoj/devel/prompt_optimalization/vllm_api.py
+python /home/kloudvoj/devel/prompt_optimization/vllm_api.py
