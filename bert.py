@@ -34,3 +34,5 @@ class Bert():
     
     def cos_sim_precalc(self, embed1, embed2):
         return cosine_similarity([embed1], [embed2])[0][0]
+    
+bert = Bert()

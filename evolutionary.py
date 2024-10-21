@@ -65,8 +65,8 @@ class EvoParams():
         """
         fsm = self.filter_similar_method
         if fsm == 'bert':
-            from bert import Bert
-            self.bert = Bert()
+            from bert import bert
+            self.bert = bert
             return lambda a, b: self.bert.cos_sim_precalc(a.bert_embedding, b.bert_embedding)
         if fsm == 'rouge':
             from rouge_score import rouge_scorer

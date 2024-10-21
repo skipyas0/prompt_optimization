@@ -1,16 +1,6 @@
 from typing import Callable
 from utils import parse_verdict, parse_answer
 from random import random
-def simple_list_intersection(ground: str, sample: str, delimeter: str = 'l') -> float:
-    """
-    Expects two strings, both delimited by delimeter -> uses them like lists.
-    Outputs number of common (exactly equal in both lists) elements divided by the number of total unique elements.
-    """
-    sg = set(ground.split(delimeter))
-    ss = set(sample.split(delimeter))
-    common = sg & ss
-    total = sg | ss
-    return len(common) / len(total)
 
 def ask_llm_to_compare(ground: str, sample: str, gen_handle: Callable[[str], str]) -> float:
     """

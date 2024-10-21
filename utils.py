@@ -4,6 +4,7 @@ import json
 from vllm_api import OpenAIPredictor
 from typing import Callable, Literal, Optional
 import random 
+from bert import bert
 
 def load_log_dict(path: str) -> list[dict]:
     """
@@ -103,6 +104,15 @@ def create_api_handles(api: Optional[OpenAIPredictor], log_file: str, scorer: st
             score_helper = lambda ground, x: ff.ask_llm_to_compare(ground, x, usage_handle)
         elif scorer == "binary_match":
             score_helper = lambda ground, x: ff.binary_match(ground, x)
+        elif scorer == "levenshtein":
+            from Levenshtein import ratio            
+            score_helper = ratio
+        elif scorer == "rouge":
+            from rouge_score import rouge_scorer
+            scorer = rouge_scorer.RougeScorer(['rougeL'], use_stemmer=True)
+            score_helper = lambda a,b: scorer.score(a,b)["rougeL"].fmeasure 
+        elif scorer == "bert":
+            score_helper = bert.bert_cosine_similarity
 
     def usage_handle(input: str) -> str:
         out = usage_helper(input)

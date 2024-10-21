@@ -27,7 +27,7 @@ def parse_args(log_file: str):
     parser.add_argument('--combine_co_mut', action='store_true', default=False, help='Instead of crossover and mutation, perform only crossover with a metaprompt with more emphasis on paraphrasing.')
     parser.add_argument('--ds', type=str, default="microsoft/orca-math-word-problems-200k", help='Dataset name')
     parser.add_argument('--split', type=int, nargs=3, default=[4, 100, 20], help='Split sizes for initial generatIion, training and evaluation sets')
-    parser.add_argument('--scorer', type=str, default="ask_llm_to_compare", help='Function used for evaluation of result')
+    parser.add_argument('--scorer', type=str, choices=['ask_llm_to_compare', 'levenshtein', 'binary_match', 'rouge', 'bert'],default="ask_llm_to_compare", help='Function used for evaluation of result')
     parser.add_argument('--temp', type=float, default=0.5, help='Temperature for model sampling')
     parser.add_argument('--local', action='store_true', help='Local mode: Instead of calling a VLLM server use a transformers pipeline.')
     parser.add_argument('--debug', action='store_true', help='Debug mode: No LLM, go through evolution with scrambling text and assigning random scores.')
