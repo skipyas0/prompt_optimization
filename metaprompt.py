@@ -1,12 +1,5 @@
 from typing import Optional
 
-baseline_suffixes = {
-    "Blank": "{}",
-    "Kojima": "{}\nLet's think step by step.",  # Kojima et al. 2022
-    "Zhou": "{}\nLet's work this out in a step by step way to be sure we have the right answer.",  # Zhou et al. 2022b
-    "Fernando": "{}\nSOLUTION:",  # Fernando et al. 2023
-}
-
 class Metaprompt:
     def __init__(self, task: str, text: str, formatting_identifiers: list[str]) -> None:
         self.text = text
@@ -80,9 +73,25 @@ Your task is to identify important aspects of both sequences and then combine th
     formatting_identifiers=["sequence1", "sequence2", "metastyle"]
 )
 
+solve = Metaprompt(
+    task="solve",
+    text="""{preamble}{prefix_instructions}    
+    <task>
+    {task}
+    </task>
+    {suffix_instructions}{universal_suffix}
+    """,
+    formatting_identifiers=["preamble", "prefix_instructions", "task", "suffix_instructions", "universal_suffix"]
+)
+
 metaprompts = [
     instructions,
     mutated_crossover,
     mutation,
-    crossover
+    crossover,
+    solve
 ]
+
+metaprompts_dict = {
+    p.task: p for p in metaprompts
+}

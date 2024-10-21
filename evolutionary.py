@@ -3,8 +3,9 @@ import random
 from typing import Literal, Callable, Optional
 from prompt import Prompt, PromptParams, Trait
 from datasets import Dataset
-import os
 import prompt_seed_phrases as seed
+import metaprompt as mp
+
 class EvoParams(): 
     """
     Collection of parameters for evolutionary algorithm
@@ -90,15 +91,9 @@ class EvolutionaryAlgorithm():
         self.population_through_steps: list[list[Prompt]] = []
         self.params = params
         self.target_pop_size = self.params.initial_population_size
-        
-        # !!! important !!! handles only accept dicts of type str (formatting identifier) -> str (formatting content)
-        # necessary for formatting into prompt templates - kwargs unwrapper
-        self.task_specific_handles: dict[str, Callable[[dict[str, str]], str]] = dict() 
-
+        self.metaprompts = mp.metaprompts_dict
         self.gen = generation_handle 
         self.tasks = tasks
-        self.load_instructions()
-        
         self.step = self.ga_step if self.params.evolution_mode=='GA' else None
 
     def run(self) -> None:
@@ -135,16 +130,19 @@ class EvolutionaryAlgorithm():
         """
 
         traits = []
-        for tr in self.params.trait_ids:
-            trait_text = self.task_specific_handles[tr]({
+        for trait_name in self.params.trait_ids:
+            trait_text = self.gen(
+                self.metaprompts[trait_name].format({
                 "metapersona": self.metapersona,
                 "examples": self.params.examples_for_initial_generation,
                 "metastyle": self.metastyle
-            })
+                })
+            )
 
-            traits.append(Trait(
-                trait_text
-            ))
+            traits.append(
+                Trait(trait_text)
+            )
+
         res = Prompt(traits, self.params.prompt_params)
         if self.params.filter_similar_method == 'bert':
             res.bert_embedding = self.params.bert.get_bert_embedding(str(res))
@@ -232,10 +230,13 @@ class EvolutionaryAlgorithm():
         """
         
         for ix, trait in enumerate(prompt.traits):
-            prompt.traits[ix].text = self.task_specific_handles['mutation']({
-                "sequence": trait,
-                "metastyle": self.metastyle
-            })
+            if trait.evolved:
+                prompt.traits[ix].text = self.gen(
+                    self.metaprompts['mutation'].format({
+                        "sequence": trait,
+                        "metastyle": self.metastyle
+                    })
+                )
 
     def crossover(self, prompt1: Prompt, prompt2: Prompt) -> Prompt:
         """
@@ -247,50 +248,20 @@ class EvolutionaryAlgorithm():
         id1 = prompt1.id
         res = prompt1.copy()
         for ix in range(res.n_traits):
-            t1, t2 = res.traits[ix], prompt2.traits[ix]
-            res.traits[ix].text = self.task_specific_handles[template_name]({
-                "sequence1": t1,
-                "sequence2": t2,
-                "metastyle": self.metastyle
-            })
+            if prompt1.traits[ix].evolved and prompt2.traits[ix].evolved:
+                t1, t2 = res.traits[ix], prompt2.traits[ix]
+
+                res.traits[ix].text = self.gen(
+                    self.metaprompts[template_name].format({
+                        "sequence1": t1,
+                        "sequence2": t2,
+                        "metastyle": self.metastyle
+                    })
+                )
 
         res.parent_ids = [id1, prompt2.id]
         res.generation_number += 1
         return res
-
-    def load_instructions_files(self) -> None:
-        """
-        Access prewritten instructions to be used in genetic operators.
-        """
-        curr_path = os.getcwd()
-        path = curr_path + '/metaprompts/'
-        for fn in os.listdir(path):
-            op_name = fn.split('.')[0]
-            with open(path + fn, 'r') as file:
-                instructions = file.read()
-
-                # Store a handle to be used with 1 or 2 prompt-traits
-                # Unpack them and format them into the instruction template - it has 1 or 2 {} brackets for formatting
-                def handle(s: dict[str, str], instructions=instructions) -> str:
-                    prompt = instructions.format(*list(s.values()))
-                    return self.gen(prompt)
-                 
-                self.task_specific_handles[op_name] = handle
-
-        assert len(self.task_specific_handles.keys()) == len(os.listdir(path))
-
-    def load_instructions(self) -> None:
-        """
-        Access prewritten instructions to be used in genetic operators.
-        """
-        from prompt_templates import metaprompts
-
-        for mp in metaprompts:
-            def handle(s: dict[str, str], metaprompt=mp) -> str:
-                prompt = metaprompt.format(s)
-                return self.gen(prompt)
-            
-            self.task_specific_handles[mp.task] = handle
     
     @property
     def metapersona(self) -> str:
