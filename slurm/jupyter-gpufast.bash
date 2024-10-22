@@ -6,7 +6,7 @@
 #SBATCH --gres gpu:1
 #SBATCH --time 4:00:00
 #SBATCH --job-name evoprompt-test
-#SBATCH --output /home/kloudvoj/devel/prompt_optimalization/logs/slurm_out/notebook-%J.log
+#SBATCH --output /home/kloudvoj/devel/prompt_optimization/logs/slurm_out/notebook-%J.log
 
 # get tunneling info
 XDG_RUNTIME_DIR=""

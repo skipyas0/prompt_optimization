@@ -123,8 +123,8 @@ class Prompt():
             'avg_fitness': self.fitness,
             'best_task_result': self.result,
             'best_fitness': self.best_fitness,
-            'average_similarity': self.average_similarity,
-            'maximum_similarity': self.maximum_similarity
+            'average_similarity': float(self.average_similarity),
+            'maximum_similarity': float(self.maximum_similarity)
             #'bert_embedding': self.bert_embedding
         }
         with open(self.params.log_file, 'a') as f:
