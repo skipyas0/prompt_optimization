@@ -5,11 +5,6 @@ class OpenAIPredictor:
     def __init__(self, model, temp=0.75):
         self.model = model
         self.temp = temp
-        self.stats = {
-            "calls": 0,
-            "tokens_in": 0,
-            "tokens_out": 0,
-        }
         port = os.environ["VLLM_MY_PORT"]
 
         self.client = openai.OpenAI(
@@ -46,10 +41,10 @@ class OpenAIPredictor:
             completion = {"error": "openai.BadRequestError", "choices": [{"message": {"content": str(e)}}]}
         
         print(completion)
-        stats.add_to_current_step({"calls": 1})
+        stats.add_to_current_step({"Total LLM calls": 1})
         stats.append_to_current_step({
-            "tokens_in": completion.usage.prompt_tokens,
-            "tokens_out": completion.usage.completion_tokens
+            "Tokens in": completion.usage.prompt_tokens,
+            "Tokens out": completion.usage.completion_tokens
         })
         return completion.choices[0].message.content
     

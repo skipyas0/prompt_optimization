@@ -97,7 +97,7 @@ class Prompt():
         fitness_scores = [self.params.evaluation_handle(ground, gen) for ground, gen in zip(ground_truths, results)]
         self.best_fitness, self.result = max(zip(fitness_scores, results)) # save result with best performance on 
         self.fitness = sum(fitness_scores) / len(fitness_scores)
-        stats.append_to_current_step({"training_fitness": self.fitness})
+        stats.append_to_current_step({"Fitness in training": self.fitness})
         return self.fitness
 
     def copy(self) -> Prompt:

@@ -148,7 +148,7 @@ class EvolutionaryAlgorithm():
         if self.params.filter_similar_method == 'bert':
             res.bert_embedding = self.params.bert.get_bert_embedding(str(res))
 
-        stats.add_to_current_step({"lammarck": 1})
+        stats.add_to_current_step({"New prompt generation": 1})
         return res
     
     def create_prompt_mutate_from_template(self, template: Prompt) -> Prompt:

@@ -74,9 +74,9 @@ def plot_training_stats(ident: str) -> None:
         generations = range(1, len(values) + 1) 
         plt.plot(generations, values, label=name, color=color)
 
-        plt.xlabel('Generation')
+        plt.xlabel(f'{name}')
         plt.ylabel('Fitness')
-        plt.title('Evolution progress')
+        plt.title(f'Progress of {name} in training')
         
         plt.legend()  
         plt.savefig(f'plots/{ident}/{name}.svg', format='svg')

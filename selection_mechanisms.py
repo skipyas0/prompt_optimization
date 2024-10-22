@@ -68,8 +68,8 @@ def filter_similar(population: list[Prompt], params: EvoParams) -> list[Prompt]:
         p1.maximum_similarity = max(sims) 
 
         stats.append_to_current_step({
-            "average_similarity": p1.average_similarity,
-            "maximum_similarity": p1.maximum_similarity 
+            "Average semantic similarity": p1.average_similarity,
+            "Maximum semantic similarity": p1.maximum_similarity 
         })
 
         if p1.maximum_similarity > params.filter_th:
