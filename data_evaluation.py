@@ -63,7 +63,7 @@ def plot_generations(scores: dict[str, list[float]], ident: str, file_name:str) 
     plt.title('Evolution progress')
     
     plt.legend()  
-    plt.savefig(f'plots/{ident}/{file_name}.svg', format='svg')
+    plt.savefig(f'runs/{ident}/plots/{file_name}.svg', format='svg')
 
 def plot_training_stats(ident: str) -> None:
     color_cycle = itertools.cycle(plt.cm.get_cmap('tab10').colors)
@@ -76,10 +76,10 @@ def plot_training_stats(ident: str) -> None:
 
         plt.xlabel(f'{name}')
         plt.ylabel('Fitness')
-        plt.title(f'Progress of {name} in training')
+        plt.title(f'Progress of {name.lower()} in training')
         
-        plt.legend()  
-        plt.savefig(f'plots/{ident}/{name}.svg', format='svg')
+        plt.legend()
+        plt.savefig(f'runs/{ident}/plots/{name.lower().replace(" ", "_")}.svg', format='svg')
 
 def calculate_baseline(eval_data: Dataset, baseline_prompt: Prompt, prompt_params: PromptParams) -> list[float]:
     """

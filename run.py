@@ -9,7 +9,9 @@ from stats import stats
 
 if __name__ == "__main__":
     ident = getenv("SLURM_JOB_ID") or datetime.now().strftime('%H-%M-%S_%d-%m-%Y')
-    log_file = f"logs/results/{ident}.ndjson"
+    mkdir(f"runs/{ident}")
+    mkdir(f"runs/{ident}/plots")
+    log_file = f"runs/{ident}/results.ndjson"
 
     evo_params, splits, api = parse_args_and_init(log_file)
     train, eval_data = splits
@@ -39,8 +41,7 @@ if __name__ == "__main__":
     scores_gen.update(baseline_scores)
     scores_steps.update(baseline_scores)
 
-    mkdir(f"plots/{ident}")
+    
     eval.plot_generations(scores_gen, ident, "generations")
     eval.plot_generations(scores_steps, ident, "steps")
     eval.plot_training_stats(ident)
-    print(stats)

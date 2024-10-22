@@ -40,7 +40,6 @@ class OpenAIPredictor:
             print(f"WARNING: openai.BadRequestError for: {msgs}")
             completion = {"error": "openai.BadRequestError", "choices": [{"message": {"content": str(e)}}]}
         
-        print(completion)
         stats.add_to_current_step({"Total LLM calls": 1})
         stats.append_to_current_step({
             "Tokens in": completion.usage.prompt_tokens,

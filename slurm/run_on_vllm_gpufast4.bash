@@ -3,7 +3,7 @@
 #SBATCH --nodes=1 --ntasks-per-node=1 --cpus-per-task=4
 #SBATCH --partition=gpufast --gres=gpu:4
 #SBATCH --mem=256G
-#SBATCH --out=/home/kloudvoj/devel/prompt_optimization/logs/slurm_out/vllm-api.%j.out
+#SBATCH --out=/home/kloudvoj/devel/prompt_optimization/logs/vllm-api.%j.out
 #SBATCH --job-name evoprompt-run
 #SBATCH --mail-user=kloudvoj@fel.cvut.cz
 
@@ -16,7 +16,7 @@ export PYTORCH_CUDA_ALLOC_CONF="expandable_segments:True"
 export VLLM_MY_PORT=$(shuf -i8000-8999 -n1)
 echo "VLLM_MY_PORT=${VLLM_MY_PORT}"
 
-export VLLM_LOG="/home/kloudvoj/devel/prompt_optimization/logs/slurm_out/vllm-api.$SLURM_JOB_ID.vllm_server.out"
+export VLLM_LOG="/home/kloudvoj/devel/prompt_optimization/logs/vllm-api.$SLURM_JOB_ID.vllm_server.out"
 nohup /home/kloudvoj/devel/prompt_optimization/slurm/vllm-serve.bash $1 2>&1 > "$VLLM_LOG" &
 
 # Wait for VLLM server startup

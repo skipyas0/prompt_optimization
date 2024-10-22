@@ -3,4 +3,5 @@ __pycache__/*
 logs/*
 notebooks/*
 plots/*
+runs/*
 .vscode/*

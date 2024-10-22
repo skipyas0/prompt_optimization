@@ -3,7 +3,7 @@
 #SBATCH --nodes=1 --ntasks-per-node=1 --cpus-per-task=4
 #SBATCH --partition=amdgpufast --gres=gpu:2
 #SBATCH --mem=96G
-#SBATCH --out=/home/kloudvoj/devel/prompt_optimization/logs/slurm_out/vllm-api.%j.out
+#SBATCH --out=/home/kloudvoj/devel/prompt_optimization/logs/vllm-api.%j.out
 #SBATCH --job-name model_test
 #SBATCH --mail-user=kloudvoj@fel.cvut.cz
 
