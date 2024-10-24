@@ -1,5 +1,30 @@
 from typing import Optional
 
+formatting_enforcement_suffixes = {
+    'numeric': """After your explanation give your answer as a numeric value in two pairs of square brackets.
+<example>
+EXPLANATION
+[[ANSWER]]
+</example>
+""",
+    'choice': """After your explanation choose the best option and give your answer in two pairs of square brackets.
+Answer only with the letter of the option.
+<example>
+TASK
+X: ANSWER1
+Y: ANSWER2
+EXPLANATION
+[[X]]
+</example>
+""",
+'yes-no': """After your explanation write your Yes/No answer into two pairs of square brackets.
+Only use 'Yes' or 'No' as your answer. Only terminate your answer with [[Yes]] or [[No]].
+""",
+'true-false': """After your explanation write your True/False answer into two pairs of square brackets.
+Only use 'True' or 'False' as your answer. Only terminate your answer with [[True]] or [[False]].
+"""
+}
+
 class Metaprompt:
     def __init__(self, task: str, text: str, formatting_identifiers: list[str]) -> None:
         self.text = text
@@ -10,9 +35,9 @@ class Metaprompt:
         return self.text
     
     def format(self, replace: dict[str, str]) -> Optional[str]:
-        if list(replace.keys()) == self.formatting_identifiers:
+        if set(replace.keys()) == self.formatting_identifiers:
             return str(self).format(**replace)
-        return None
+        raise KeyError(f"Formatting failed, keys given: {list(replace.keys())}, keys needed {self.formatting_identifiers}")
     
 instructions = Metaprompt(
     task="instructions",
@@ -23,8 +48,8 @@ instructions = Metaprompt(
 Substitute the <-INS-> tag with your generated instructions. 
 Pay attention to the tag's location in the example.
 Try to be as concise as possible.
-{metastyle}Generated instructions:""",
-    formatting_identifiers=["metapersona", "examples", "metastyle"]
+{length}{metastyle}Generated instructions:""",
+    formatting_identifiers={"metapersona", "examples", "length", "metastyle"}
 )
 
 mutated_crossover = Metaprompt(
@@ -41,7 +66,7 @@ Avoid using the same words as in the original sequences.
 {sequence2}
 </sequence2>
 {metastyle}Resulting Sequence:""",
-    formatting_identifiers=["sequence1", "sequence2", "metastyle"]
+    formatting_identifiers={"sequence1", "sequence2", "metastyle"}
 )
 
 mutation = Metaprompt(
@@ -54,7 +79,7 @@ Conserve the original meaning.
 {sequence}
 </sequence>
 {metastyle}Resulting Sequence:""",
-    formatting_identifiers=["sequence", "metastyle"]
+    formatting_identifiers={"sequence", "metastyle"}
 )
 
 crossover = Metaprompt(
@@ -70,7 +95,7 @@ Your task is to identify important aspects of both sequences and then combine th
 {sequence2}
 </sequence2>
 {metastyle}Resulting Sequence:""",
-    formatting_identifiers=["sequence1", "sequence2", "metastyle"]
+    formatting_identifiers={"sequence1", "sequence2", "metastyle"}
 )
 
 solve = Metaprompt(
@@ -81,7 +106,7 @@ solve = Metaprompt(
     </task>
     {suffix_instructions}{universal_suffix}
     """,
-    formatting_identifiers=["preamble", "prefix_instructions", "task", "suffix_instructions", "universal_suffix"]
+    formatting_identifiers={"preamble", "prefix_instructions", "task", "suffix_instructions", "universal_suffix"}
 )
 
 metaprompts = [

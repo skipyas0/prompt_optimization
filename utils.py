@@ -5,7 +5,7 @@ from vllm_api import OpenAIPredictor
 from typing import Callable, Literal, Optional
 import random 
 from bert import bert
-
+from metaprompt import formatting_enforcement_suffixes
 def load_log_dict(path: str) -> list[dict]:
     """
     Open .ndjson and load it as list of dicts
@@ -16,16 +16,36 @@ def load_log_dict(path: str) -> list[dict]:
             data.append(json.loads(line))  # Convert each line to a dictionary
     return data
 
-def load_splits(ds_name: str, split: tuple[int, int, int]) -> tuple[Dataset, Dataset, Dataset]:
+def load_splits(ds_name: str, split: tuple[int, int, int]) -> tuple[str, Dataset, Dataset, Dataset]:
     """
     Load dataset and split it according to sample numbers in input tuple.
     """
-    ds = load_dataset(ds_name, 'main', split='train') if ds_name == 'openai/gsm8k' else load_dataset(ds_name, split='train')
+    if ds_name == 'openai/gsm8k':
+        ds = load_dataset(ds_name, 'main', split='train')
+        ans_type = 'numeric'
+    elif re.fullmatch('^maveriq/bigbenchhard/[a-z]+(_[a-z]+)*$', ds_name):
+        subset = ds_name.split('/')[-1]
+        ds = load_dataset('maveriq/bigbenchhard', subset, split='train')
+        ds = ds.map(map_bigbenchhard)
+        if subset in ['causal_judgement', 'navigate', 'web_of_lies', 'sports_understanding']:
+            ans_type = 'yes-no'
+        elif subset in ['snarks', 'disambiguation_qa', 'geometric_shapes', 'hyperbaton', 'movie_recommendation', 'penguins_in_a_table']:
+            ans_type = 'choice'
+        else:
+            raise KeyError(f"Unsupported bigbenchhard subset {subset}")
+        
+    elif ds_name == 'GBaker/MedQA-USMLE-4-options':
+        ds = load_dataset(ds_name, 'main', split='train')
+        ds = ds.map(map_medqa_usmle, remove_colums=ds.column_names)
+        ans_type = 'choice'
+    else:
+        raise KeyError(f"Unsupported dataset {ds_name}")
+    suff = formatting_enforcement_suffixes[ans_type]
     ds = ds.shuffle(seed=42).select(range(sum(split)))
     infer = ds.select(range(split[0]))
     train = ds.select(range(split[0], sum(split[:2])))
     test = ds.select(range(sum(split[:2]), sum(split)))
-    return infer, train, test
+    return suff, infer, train, test
 
 def join_dataset_to_str(dataset: Dataset, insertion_token: str, insertion_position: Literal["prefix", "suffix"] = "prefix") -> str:   
     """
@@ -91,7 +111,7 @@ def log_usage(log_file: str, input: str | tuple[str, str], output: str | float) 
 def create_api_handles(api: Optional[OpenAIPredictor], log_file: str, scorer: str) -> tuple[Callable[[str], str], Callable[[str], float]]:
     if api is None:
         #fast debug to replace LLM calls 
-        def scramble(input: str, _: int = 0) -> str:
+        def scramble(input: str) -> str:
             char_list = list(input)
             random.shuffle(char_list)
             return ''.join(char_list)
@@ -131,3 +151,30 @@ def create_api_handles(api: Optional[OpenAIPredictor], log_file: str, scorer: st
         return out
     
     return usage_handle, score_handle
+
+
+def find_key_by_value(d, x):
+    for key, value in d.items():
+        if value == x:
+            return key
+    return None  
+
+def map_medqa_usmle(example):
+    options_text = "\n".join(f'{k}: {v}' for k,v in example['options'].items()) 
+    example['question'] = example['question'] + "\nOptions:\n" + options_text
+    example['answer'] = find_key_by_value(example['options'], example['answer'])
+    return {'question': example['question'], 'answer': example['answer']}  # Only keep these two fields
+
+def map_bigbenchhard(example):
+    if type(example['target']) == list:
+        example['target'] = example['target'][0]
+    if type(example['input']) == list:    
+        example['input'] = example['input'][0]
+
+    if re.fullmatch('^[(][A-Z][)]$',example['target']):
+        example['target'] = example['target'][1]
+    elif example['target'] == 'no':
+        example['target'] = 'No'
+    elif example['target'] == 'yes':
+        example['target'] = 'Yes'
+    return {'question': example['input'], 'answer': example['target']}  # Only keep these two fields

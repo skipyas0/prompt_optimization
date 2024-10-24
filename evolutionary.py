@@ -31,7 +31,9 @@ class EvoParams():
                  examples_for_initial_generation: str = "",
                  repop_method_proportion: float = 1.0,
                  metapersonas: bool = False,
-                 metastyles: bool = False)-> None:
+                 metastyles: bool = False,
+                 points_range: tuple[int, int] = (3,6),
+                 sentences_per_point_range: tuple[int, int] = (1,3))-> None:
         self.initial_population_size = initial_population_size
         self.population_change_rate = population_change_rate
         self.mating_pool_size = mating_pool_size
@@ -58,7 +60,9 @@ class EvoParams():
         self.prompt_params: Optional[PromptParams]=None
         self.metapersonas = metapersonas
         self.metastyles = metastyles
-        
+        self.points_range = points_range
+        self.sentences_per_point_range = sentences_per_point_range
+        self.format_enforcement_suffix = ""
 
     def get_similarity_scoring_handle(self) -> Optional[Callable[[Prompt, Prompt], float]]:
         """
@@ -136,7 +140,9 @@ class EvolutionaryAlgorithm():
                 self.metaprompts[trait_name].format({
                 "metapersona": self.metapersona,
                 "examples": self.params.examples_for_initial_generation,
-                "metastyle": self.metastyle
+                "metastyle": self.metastyle,
+                "length": seed.random_length(self.params.points_range,
+                                             self.params.sentences_per_point_range)
                 })
             )
 

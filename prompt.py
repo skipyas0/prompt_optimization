@@ -5,7 +5,8 @@ from datasets import Dataset
 import json
 import metaprompt
 from stats import stats
-universal_suffix = """After your explanation, make sure you put your final answer in two pairs of square brackets.
+
+universal_suffix = """After your explanation, make sure you put your final answer in two pairs of square brackets. 
 <example>
 ...
 And for the above reasons, the solution is ANSWER.
@@ -30,12 +31,12 @@ class Trait:
         )
 
 class PromptParams():
-    def __init__(self, usage_handle: Callable[[str], str], evalutation_handle: Callable[[str, str], float], log_file: str) -> None:
+    def __init__(self, usage_handle: Callable[[str], str], evalutation_handle: Callable[[str, str], float], log_file: str, format_enforcement_suffix: str) -> None:
         self.usage_handle = usage_handle
         self.evaluation_handle = evalutation_handle
         self.log_file = log_file
         self.metaprompt = metaprompt.solve
-
+        self.format_enforment_suffix = format_enforcement_suffix
 class Prompt():
     def __init__(self, traits: list[Trait] | dict, params: PromptParams) -> None: 
         if isinstance(traits, dict):   
@@ -89,7 +90,7 @@ class Prompt():
                 "prefix_instructions": self.prefix_part(), 
                 "task": task["question"], 
                 "suffix_instructions": self.suffix_part(), 
-                "universal_suffix": universal_suffix
+                "universal_suffix": self.params.format_enforment_suffix
             })) 
             for task in batch]
         

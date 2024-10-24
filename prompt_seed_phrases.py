@@ -1,3 +1,4 @@
+import random
 wording_styles = [
     "Use clear and simple language to explain the task.",
     "Make the instructions more fun by using playful language.",
@@ -210,3 +211,11 @@ motivational_phrases = [
     "This will help me be more efficient in the future.",
     "I’m doing it for my own satisfaction."
 ]
+
+def random_length(points_range: tuple[int, int], sentences_per_point_range: tuple[int, int]) -> str:
+    a, b = points_range
+    points = random.randint(a,b)
+    c, d = sentences_per_point_range 
+    sentence_per_point = random.randint(c,d)
+    plural = ['s' if x>1 else '' for x in [points, sentence_per_point]]
+    return f"Keep your response to {points} most important point{plural[0]} with up to {sentence_per_point} sentence{plural[1]} for each point.\n"

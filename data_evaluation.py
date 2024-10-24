@@ -54,7 +54,7 @@ def plot_generations(scores: dict[str, list[float]], ident: str, file_name:str) 
         color = next(color_cycle)
         generations = range(1, len(values) + 1) 
         if len(values) == 1:
-            plt.axhline(y=values[0], color=color, label=name, linestyle='--')
+            plt.axhline(y=values[0], color=color, label=name, linestyle='-.', alpha=0.5)
         else:
             plt.plot(generations, values, label=name, color=color)
 
@@ -74,8 +74,8 @@ def plot_training_stats(ident: str) -> None:
         generations = range(1, len(values) + 1) 
         plt.plot(generations, values, label=name, color=color)
 
-        plt.xlabel(f'{name}')
-        plt.ylabel('Fitness')
+        plt.ylabel(f'{name}')
+        plt.xlabel('Step')
         plt.title(f'Progress of {name.lower()} in training')
         
         plt.legend()

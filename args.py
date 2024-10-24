@@ -6,7 +6,7 @@ from typing import Optional
 from vllm_api import OpenAIPredictor
 from local_api import LocalPredictor
 
-def parse_args(log_file: str):
+def parse_args(ident: str):
     parser = argparse.ArgumentParser(description="Prompt optimalization with evolutionary algorithm")
     parser.add_argument('model', type=str, help='Model used for generation (huggingface link)')
     
@@ -36,22 +36,26 @@ def parse_args(log_file: str):
     parser.add_argument('--repop_method_proportion', type=float, default=1.0, help='Probability of using lamarckian mutation (creating fresh prompts like in initial population) instead of mutating remaining prompts when pop_size<mating_pool_size (too many prompts similarity-filtered).')
     parser.add_argument('--metapersonas', action='store_true', default=False, help='Choose a random metapersona to aid in prompt diversity.')
     parser.add_argument('--metastyles', action='store_true', default=False, help='Add a random thinking/wording style to LLM calls to promote diversity.')
+    parser.add_argument('--points_range', type=int, nargs=2, default=[3,6], help='Used for randomly generating a limit of points in instruction prompt.')
+    parser.add_argument('--sentences_per_point_range', type=int, nargs=2, default=[1,3], help='Used for randomly generating a limit for the number of sentences per point in instruction prompt.')
 
     args = parser.parse_args()
 
     if args.log:
-        from json import dumps
+        from json import dumps, dump
         args_dict = vars(args)
         args_dict["type"] = "args"
-        with open(log_file, 'w') as f:
+        with open(f"runs/{ident}/results.ndjson", 'w') as f:
             f.write(dumps(vars(args)) + '\n')
+        with open(f"runs/{ident}/run_args.json", 'w') as f:
+            dump(vars(args), f, indent=4)
     return args
 
-def parse_args_and_init(log_file: str) -> tuple[EvoParams, tuple[Dataset, Dataset], Optional[OpenAIPredictor | LocalPredictor]]:
+def parse_args_and_init(ident: str) -> tuple[str, EvoParams, tuple[Dataset, Dataset], Optional[OpenAIPredictor | LocalPredictor]]:
     """
     Parses CLI args and initialized parameters for evolutionary algorithm, dataset splits and OpenAI API object.
     """
-    args = parse_args(log_file)
+    args = parse_args(ident)
     evo_params = EvoParams(
         initial_population_size=args.initial_population_size,
         population_change_rate=args.population_change_rate,
@@ -72,18 +76,20 @@ def parse_args_and_init(log_file: str) -> tuple[EvoParams, tuple[Dataset, Datase
         filter_th=args.filter_th,
         repop_method_proportion=args.repop_method_proportion,
         metapersonas=args.metapersonas,
-        metastyles=args.metastyles
+        metastyles=args.metastyles,
+        points_range=args.points_range,
+        sentences_per_point_range=args.sentences_per_point_range,
     )
     if args.debug:
         api = None
     else:
         api = LocalPredictor(args.model, args.temp) if args.local else OpenAIPredictor(args.model, args.temp)
 
-    infer, train, eval_data = utils.load_splits(args.ds, args.split)
+    suff, infer, train, eval_data = utils.load_splits(args.ds, args.split)
 
     instruction_insertion_token = "<-INS->\n"
     examples = utils.join_dataset_to_str(infer, instruction_insertion_token)
     evo_params.examples_for_initial_generation = examples
-    return evo_params, (train, eval_data) ,api
+    return suff, evo_params, (train, eval_data), api
 
     

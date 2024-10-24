@@ -13,12 +13,12 @@ if __name__ == "__main__":
     mkdir(f"runs/{ident}/plots")
     log_file = f"runs/{ident}/results.ndjson"
 
-    evo_params, splits, api = parse_args_and_init(log_file)
+    suff, evo_params, splits, api = parse_args_and_init(ident)
     train, eval_data = splits
     
     usage_handle, score_handle = utils.create_api_handles(api, log_file, evo_params.scorer)
     
-    prompt_params = PromptParams(usage_handle, score_handle, log_file)
+    prompt_params = PromptParams(usage_handle, score_handle, log_file, suff)
     evo_params.prompt_params = prompt_params
     EA = EvolutionaryAlgorithm(evo_params, usage_handle, train)
     EA.populate()
@@ -31,8 +31,8 @@ if __name__ == "__main__":
     baseline_suffixes = {
         "Blank": "{}",
         "Kojima": "{}\nLet's think step by step.",  # Kojima et al. 2022
-        "Zhou": "{}\nLet's work this out in a step by step way to be sure we have the right answer.",  # Zhou et al. 2022b
-        "Fernando": "{}\nSOLUTION:",  # Fernando et al. 2023
+        #"Zhou": "{}\nLet's work this out in a step by step way to be sure we have the right answer.",  # Zhou et al. 2022b
+        #"Fernando": "{}\nSOLUTION:",  # Fernando et al. 2023
     }
     
     scores_gen = {"Generation": generation_scores}
