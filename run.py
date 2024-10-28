@@ -5,7 +5,6 @@ from os import getenv, mkdir
 import utils
 from args import parse_args_and_init
 import data_evaluation as eval
-from stats import stats
 
 if __name__ == "__main__":
     ident = getenv("SLURM_JOB_ID") or datetime.now().strftime('%H-%M-%S_%d-%m-%Y')
@@ -17,10 +16,11 @@ if __name__ == "__main__":
     train, eval_data = splits
     
     usage_handle, score_handle = utils.create_api_handles(api, log_file, evo_params.scorer)
-    
-    prompt_params = PromptParams(usage_handle, score_handle, log_file, suff)
+    usage_EA = lambda prompt: usage_handle(prompt, evo_params.temp)
+    usage_solve = lambda prompt: usage_handle(prompt, evo_params.sol_temp)
+    prompt_params = PromptParams(usage_solve, score_handle, log_file, suff)
     evo_params.prompt_params = prompt_params
-    EA = EvolutionaryAlgorithm(evo_params, usage_handle, train)
+    EA = EvolutionaryAlgorithm(evo_params, usage_EA, train)
     EA.populate()
     EA.run()
 

@@ -8,7 +8,7 @@ from local_api import LocalPredictor
 
 def parse_args(ident: str):
     parser = argparse.ArgumentParser(description="Prompt optimalization with evolutionary algorithm")
-    parser.add_argument('model', type=str, help='Model used for generation (huggingface link)')
+    parser.add_argument('model', type=str, help='Model used for generation (huggingface link), mandatory argument. In debug mode use eg. "". ')
     
     parser.add_argument('--initial_population_size', type=int, default=6, help='Initial size of the population')
     parser.add_argument('--population_change_rate', type=int, default=0, help='Rate of population change')
@@ -28,7 +28,8 @@ def parse_args(ident: str):
     parser.add_argument('--ds', type=str, default="microsoft/orca-math-word-problems-200k", help='Dataset name')
     parser.add_argument('--split', type=int, nargs=3, default=[4, 100, 20], help='Split sizes for initial generatIion, training and evaluation sets')
     parser.add_argument('--scorer', type=str, choices=['ask_llm_to_compare', 'levenshtein', 'binary_match', 'rouge', 'bert'],default="ask_llm_to_compare", help='Function used for evaluation of result')
-    parser.add_argument('--temp', type=float, default=0.5, help='Temperature for model sampling')
+    parser.add_argument('--temp', type=float, default=0.5, help='Sampling temperature used in calls to genetic operators etc. Higher than temp used for solving tasks.')
+    parser.add_argument('--sol_temp', type=float, default=0.25, help='Sampling temperature used in calls to solve tasks.')
     parser.add_argument('--local', action='store_true', help='Local mode: Instead of calling a VLLM server use a transformers pipeline.')
     parser.add_argument('--debug', action='store_true', help='Debug mode: No LLM, go through evolution with scrambling text and assigning random scores.')
     parser.add_argument('--filter_similar_method', type=str, choices=['None', 'bert', 'levenshtein', 'rouge'], default='None',help='How to filter prompts based on similarity. If not None, it is applied before selection mechanism.')
@@ -79,11 +80,13 @@ def parse_args_and_init(ident: str) -> tuple[str, EvoParams, tuple[Dataset, Data
         metastyles=args.metastyles,
         points_range=args.points_range,
         sentences_per_point_range=args.sentences_per_point_range,
+        temp=args.temp,
+        sol_temp=args.temp
     )
     if args.debug:
         api = None
     else:
-        api = LocalPredictor(args.model, args.temp) if args.local else OpenAIPredictor(args.model, args.temp)
+        api = LocalPredictor(args.model, args.temp) if args.local else OpenAIPredictor(args.model)
 
     suff, infer, train, eval_data = utils.load_splits(args.ds, args.split)
 

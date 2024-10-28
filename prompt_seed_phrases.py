@@ -217,5 +217,8 @@ def random_length(points_range: tuple[int, int], sentences_per_point_range: tupl
     points = random.randint(a,b)
     c, d = sentences_per_point_range 
     sentence_per_point = random.randint(c,d)
-    plural = ['s' if x>1 else '' for x in [points, sentence_per_point]]
-    return f"Keep your response to {points} most important point{plural[0]} with up to {sentence_per_point} sentence{plural[1]} for each point.\n"
+    sentence_instruction = f"up to {sentence_per_point} sentences" if sentence_per_point > 1 else "1 sentence"
+    if points == 1:
+        return f"Respond with {sentence_instruction}.\n"
+    else:
+        return f"Keep your response to {points} most important points with {sentence_instruction} for each point.\n"

@@ -33,7 +33,9 @@ class EvoParams():
                  metapersonas: bool = False,
                  metastyles: bool = False,
                  points_range: tuple[int, int] = (3,6),
-                 sentences_per_point_range: tuple[int, int] = (1,3))-> None:
+                 sentences_per_point_range: tuple[int, int] = (1,3),
+                 temp: float = 0.5,
+                 sol_temp: float = 0.25)-> None:
         self.initial_population_size = initial_population_size
         self.population_change_rate = population_change_rate
         self.mating_pool_size = mating_pool_size
@@ -63,6 +65,8 @@ class EvoParams():
         self.points_range = points_range
         self.sentences_per_point_range = sentences_per_point_range
         self.format_enforcement_suffix = ""
+        self.temp = temp
+        self.sol_temp = sol_temp
 
     def get_similarity_scoring_handle(self) -> Optional[Callable[[Prompt, Prompt], float]]:
         """

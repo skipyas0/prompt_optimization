@@ -1,4 +1,4 @@
-from datasets import load_dataset, Dataset
+from datasets import load_dataset, Dataset, Value
 import re
 import json
 from vllm_api import OpenAIPredictor
@@ -16,9 +16,9 @@ def load_log_dict(path: str) -> list[dict]:
             data.append(json.loads(line))  # Convert each line to a dictionary
     return data
 
-def load_splits(ds_name: str, split: tuple[int, int, int]) -> tuple[str, Dataset, Dataset, Dataset]:
+def load_dataset_and_preprocess(ds_name: str) -> tuple[str, Dataset]:
     """
-    Load dataset and split it according to sample numbers in input tuple.
+    Downloads one of the supported datasets and preprocesses it.
     """
     if ds_name == 'openai/gsm8k':
         ds = load_dataset(ds_name, 'main', split='train')
@@ -33,13 +33,25 @@ def load_splits(ds_name: str, split: tuple[int, int, int]) -> tuple[str, Dataset
             ans_type = 'choice'
         else:
             raise KeyError(f"Unsupported bigbenchhard subset {subset}")
-        
     elif ds_name == 'GBaker/MedQA-USMLE-4-options':
-        ds = load_dataset(ds_name, 'main', split='train')
-        ds = ds.map(map_medqa_usmle, remove_colums=ds.column_names)
+        ds = load_dataset(ds_name, 'default', split='train')
+        ds = ds.map(map_medqa_usmle, remove_columns=ds.column_names)
+        ans_type = 'choice'
+    elif re.fullmatch('^cais/mmlu/[a-z]+(_[a-z]+)*$', ds_name):
+        subset = ds_name.split('/')[-1]
+        ds = load_dataset('cais/mmlu', subset, split='test')
+        ds = ds.cast_column('answer', Value('string'))
+        ds = ds.map(map_mmlu, remove_columns=ds.column_names)
         ans_type = 'choice'
     else:
         raise KeyError(f"Unsupported dataset {ds_name}")
+    return ans_type, ds
+
+def load_splits(ds_name: str, split: tuple[int, int, int]) -> tuple[str, Dataset, Dataset, Dataset]:
+    """
+    Load dataset and split it according to sample numbers in input tuple.
+    """
+    ans_type, ds = load_dataset_and_preprocess(ds_name)
     suff = formatting_enforcement_suffixes[ans_type]
     ds = ds.shuffle(seed=42).select(range(sum(split)))
     infer = ds.select(range(split[0]))
@@ -108,10 +120,10 @@ def log_usage(log_file: str, input: str | tuple[str, str], output: str | float) 
     with open(log_file, 'a') as f:
         f.write(json.dumps(log_entry) + '\n')
 
-def create_api_handles(api: Optional[OpenAIPredictor], log_file: str, scorer: str) -> tuple[Callable[[str], str], Callable[[str], float]]:
+def create_api_handles(api: Optional[OpenAIPredictor], log_file: str, scorer: str) -> tuple[Callable[[str, float], str], Callable[[str], float]]:
     if api is None:
         #fast debug to replace LLM calls 
-        def scramble(input: str) -> str:
+        def scramble(input: str, _: float) -> str:
             char_list = list(input)
             random.shuffle(char_list)
             return ''.join(char_list)
@@ -119,7 +131,7 @@ def create_api_handles(api: Optional[OpenAIPredictor], log_file: str, scorer: st
         score_helper = lambda _0, _1: random.random()
     else:
         import fitness_functions as ff
-        usage_helper = lambda prompt: api.predict(question=prompt)
+        usage_helper = lambda prompt, temp: api.predict(question=prompt, temp=temp)
         if scorer == "ask_llm_to_compare":
             score_helper = lambda ground, x: ff.ask_llm_to_compare(ground, x, usage_handle)
         elif scorer == "binary_match":
@@ -134,8 +146,8 @@ def create_api_handles(api: Optional[OpenAIPredictor], log_file: str, scorer: st
         elif scorer == "bert":
             score_helper = bert.bert_cosine_similarity
 
-    def usage_handle(input: str) -> str:
-        out = usage_helper(input)
+    def usage_handle(input: str, temp: float) -> str:
+        out = usage_helper(input, temp)
         log_usage(log_file, input, out)
         return out
     
@@ -177,4 +189,9 @@ def map_bigbenchhard(example):
         example['target'] = 'No'
     elif example['target'] == 'yes':
         example['target'] = 'Yes'
-    return {'question': example['input'], 'answer': example['target']}  # Only keep these two fields
+    return {'question': example['input'], 'answer': example['target']}  
+
+def map_mmlu(example):
+    example['question'] = example['question'] + '\n' + '\n'.join([f'{op}: {op_text}' for op, op_text in zip("ABCD", example['choices'])])
+    example['answer'] = "ABCD"[int(example['answer'])]
+    return {'question': example['question'], 'answer': example['answer']}

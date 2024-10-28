@@ -1,7 +1,6 @@
 #!/bin/bash
-#SBATCH --time=4:00:00
 #SBATCH --nodes=1 --ntasks-per-node=1 --cpus-per-task=4
-#SBATCH --partition=gpufast --gres=gpu:2
+#SBATCH --partition=gpuextralong --gres=gpu:1
 #SBATCH --mem=96G
 #SBATCH --out=/home/kloudvoj/devel/prompt_optimization/logs/vllm-api.%j.out
 #SBATCH --job-name evoprompt-run

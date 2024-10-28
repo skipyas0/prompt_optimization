@@ -2,9 +2,8 @@ import openai
 import os
 from stats import stats
 class OpenAIPredictor:
-    def __init__(self, model, temp=0.75):
+    def __init__(self, model,):
         self.model = model
-        self.temp = temp
         port = os.environ["VLLM_MY_PORT"]
 
         self.client = openai.OpenAI(
@@ -12,17 +11,17 @@ class OpenAIPredictor:
             api_key="EMPTY",
         )
 
-    def forward(self, messages):
+    def forward(self, messages, temp):
         completion = self.client.chat.completions.create(
             model=self.model,
             messages=messages,
-            temperature=self.temp,
+            temperature=temp,
             n=1,
             frequency_penalty=0.1
         )
         return completion
     
-    def predict(self, messages=None, question=None) -> str:
+    def predict(self, messages=None, question=None, temp=0.5) -> str:
         if messages is None:
             messages = [{"role": "system", "content": "You are a helpful assistant. You follow instructions and answer concisely."}]
             
@@ -34,6 +33,7 @@ class OpenAIPredictor:
         try:
             completion = self.forward(
                 messages=msgs,
+                temp=temp
             )
 
         except openai.BadRequestError as e:
