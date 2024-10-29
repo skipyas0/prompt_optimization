@@ -6,6 +6,7 @@ from datasets import Dataset
 import prompt_seed_phrases as seed
 import metaprompt as mp
 from stats import stats
+from time import time
 class EvoParams(): 
     """
     Collection of parameters for evolutionary algorithm
@@ -110,7 +111,11 @@ class EvolutionaryAlgorithm():
         """
         for i in range(self.params.max_iters):
             stats.start_step()
+            t = time()
             self.step()
+            stats.add_to_current_step({
+                "Step duration": time() - t
+            })
             self.population_through_steps.append(self.population)
 
     def populate(self) -> None:

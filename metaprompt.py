@@ -47,6 +47,7 @@ instructions = Metaprompt(
 </examples>
 Substitute the <-INS-> tag with your generated instructions. 
 Pay attention to the tag's location in the example.
+Do NOT refer to the examples in your answer! Your generated instructions will be used to aid with different examples.
 Try to be as concise as possible.
 {length}{metastyle}Generated instructions:""",
     formatting_identifiers={"metapersona", "examples", "length", "metastyle"}

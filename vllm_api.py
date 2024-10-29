@@ -1,15 +1,21 @@
 import openai
 import os
+from dotenv import load_dotenv
 from stats import stats
 class OpenAIPredictor:
-    def __init__(self, model,):
+    def __init__(self, model, use_openai=False):
         self.model = model
-        port = os.environ["VLLM_MY_PORT"]
-
-        self.client = openai.OpenAI(
-            base_url=f"http://localhost:{port}/v1",
-            api_key="EMPTY",
-        )
+        if use_openai:
+            load_dotenv()
+            self.client = openai.OpenAI(
+                api_key=os.getenv("API_KEY"),
+            )
+        else:
+            port = os.environ["VLLM_MY_PORT"]
+            self.client = openai.OpenAI(
+                base_url=f"http://localhost:{port}/v1",
+                api_key="EMPTY",
+            )
 
     def forward(self, messages, temp):
         completion = self.client.chat.completions.create(

@@ -195,3 +195,13 @@ def map_mmlu(example):
     example['question'] = example['question'] + '\n' + '\n'.join([f'{op}: {op_text}' for op, op_text in zip("ABCD", example['choices'])])
     example['answer'] = "ABCD"[int(example['answer'])]
     return {'question': example['question'], 'answer': example['answer']}
+
+class DotDict(dict):
+    """A dictionary that supports dot notation access."""
+    def __getattr__(self, item):
+        if item in self:
+            return self[item]
+        raise AttributeError(f"'DotDict' object has no attribute '{item}'")
+
+    def __setattr__(self, key, value):
+        self[key] = value

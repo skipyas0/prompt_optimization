@@ -25,15 +25,19 @@ Debug mode: *python run.py --debug*
 - rethink template formatting, format brackets are now named to account for persona/style options in template
 
 ## Tested models
-- hugging-quants/Meta-Llama-3.1-70B-Instruct-AWQ-INT4
-- Qwen/Qwen2.5-14B-Instruct
-- microsoft/Phi-3.5-mini-instruct (runs on V100)
+- hugging-quants/Meta-Llama-3.1-70B-Instruct-AWQ-INT4 (2 A100)
+- Qwen/Qwen2.5-14B-Instruct (1 A100)
+- microsoft/Phi-3.5-mini-instruct (1 V100)
+- meta-llama/Llama-3.2-3B-Instruct (1 V100)
+- CohereForAI/aya-expanse-8b (1 V100)
+- mistralai/Mistral-Nemo-Instruct-2407 (1 V100)
 
 ## Tested datasets
 - openai/gsm8k
 - microsoft/orca-math-word-problems-200k
-- iamollas/ethos (todo)
-- maveriq/bigbenchhard (todo)
+- maveriq/bigbenchhard
+- GBaker/MedQA-USMLE-4-options
+- cais/mmlu
 
 ## Conventions
 - Utilize HTML-like tags where possible

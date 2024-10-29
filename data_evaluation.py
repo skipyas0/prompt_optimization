@@ -69,6 +69,8 @@ def plot_training_stats(ident: str) -> None:
     color_cycle = itertools.cycle(plt.cm.get_cmap('tab10').colors)
 
     for name, values in stats.get_averages().items():
+        if type(values) != list:
+            continue
         plt.figure()
         color = next(color_cycle)
         generations = range(1, len(values) + 1) 
@@ -90,7 +92,6 @@ def calculate_baseline(eval_data: Dataset, baseline_prompt: Prompt, prompt_param
     return [prompt.calculate_fitness(eval_data)]
 
 if __name__ == "__main__":
-    from data_evaluation import evaluate_from_json
     slurm_id = argv[1]
     n_best_from_gen = 3
     scores = evaluate_from_json(f"{slurm_id}.ndjson", n_best_from_gen)

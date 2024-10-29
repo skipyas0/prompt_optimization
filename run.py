@@ -5,8 +5,11 @@ from os import getenv, mkdir
 import utils
 from args import parse_args_and_init
 import data_evaluation as eval
+from time import time
+from stats import stats
 
 if __name__ == "__main__":
+    t0 = time()
     ident = getenv("SLURM_JOB_ID") or datetime.now().strftime('%H-%M-%S_%d-%m-%Y')
     mkdir(f"runs/{ident}")
     mkdir(f"runs/{ident}/plots")
@@ -21,9 +24,12 @@ if __name__ == "__main__":
     prompt_params = PromptParams(usage_solve, score_handle, log_file, suff)
     evo_params.prompt_params = prompt_params
     EA = EvolutionaryAlgorithm(evo_params, usage_EA, train)
+    t1 = time()
+    
     EA.populate()
+    t2 = time()
     EA.run()
-
+    t3 = time()
     best_prompts = eval.best_prompts_from_each_gen(EA.all_prompts)
     generation_scores = eval.evaluate_progression(best_prompts, eval_data)
     step_scores = eval.evaluate_progression(EA.population_through_steps, eval_data)
@@ -45,3 +51,14 @@ if __name__ == "__main__":
     eval.plot_generations(scores_gen, ident, "generations")
     eval.plot_generations(scores_steps, ident, "steps")
     eval.plot_training_stats(ident)
+    t4 = time()
+
+    stats.set_const_stat({
+        "Init time": t1 - t0,
+        "Populate time": t2 - t1,
+        "Run time": t3 - t2,
+        "Eval time": t4 - t3,
+        "Total time": t4 - t0
+    })
+
+    stats.dump(ident)

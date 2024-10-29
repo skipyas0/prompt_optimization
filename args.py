@@ -5,11 +5,11 @@ from datasets import Dataset
 from typing import Optional
 from vllm_api import OpenAIPredictor
 from local_api import LocalPredictor
-
+import json
 def parse_args(ident: str):
     parser = argparse.ArgumentParser(description="Prompt optimalization with evolutionary algorithm")
     parser.add_argument('model', type=str, help='Model used for generation (huggingface link), mandatory argument. In debug mode use eg. "". ')
-    
+    parser.add_argument('--copy', type=str, default='', help="Copy all other args except for model from given ident.")
     parser.add_argument('--initial_population_size', type=int, default=6, help='Initial size of the population')
     parser.add_argument('--population_change_rate', type=int, default=0, help='Rate of population change')
     parser.add_argument('--mating_pool_size', type=int, default=4, help='Size of the mating pool')
@@ -31,6 +31,7 @@ def parse_args(ident: str):
     parser.add_argument('--temp', type=float, default=0.5, help='Sampling temperature used in calls to genetic operators etc. Higher than temp used for solving tasks.')
     parser.add_argument('--sol_temp', type=float, default=0.25, help='Sampling temperature used in calls to solve tasks.')
     parser.add_argument('--local', action='store_true', help='Local mode: Instead of calling a VLLM server use a transformers pipeline.')
+    parser.add_argument('--openai', action='store_true', help='OpenAI API mode: Instead of calling a VLLM server connect to online OpenAI API with a key in .env file.')
     parser.add_argument('--debug', action='store_true', help='Debug mode: No LLM, go through evolution with scrambling text and assigning random scores.')
     parser.add_argument('--filter_similar_method', type=str, choices=['None', 'bert', 'levenshtein', 'rouge'], default='None',help='How to filter prompts based on similarity. If not None, it is applied before selection mechanism.')
     parser.add_argument('--filter_th', type=float, default=0.95, help='Filtration threshold - prompts with higher similarity are deduplicated.')
@@ -41,15 +42,21 @@ def parse_args(ident: str):
     parser.add_argument('--sentences_per_point_range', type=int, nargs=2, default=[1,3], help='Used for randomly generating a limit for the number of sentences per point in instruction prompt.')
 
     args = parser.parse_args()
+    if len(args.copy) > 0:
+        m = args.model
+        with open(f"runs/{args.copy}/run_args.json", 'r') as f:
+            args = utils.DotDict(json.load(f))
+            if 'openai' not in args.keys():
+                args.openai = False
+            args.model = m
 
     if args.log:
-        from json import dumps, dump
         args_dict = vars(args)
         args_dict["type"] = "args"
         with open(f"runs/{ident}/results.ndjson", 'w') as f:
-            f.write(dumps(vars(args)) + '\n')
+            f.write(json.dumps(vars(args)) + '\n')
         with open(f"runs/{ident}/run_args.json", 'w') as f:
-            dump(vars(args), f, indent=4)
+            json.dump(vars(args), f, indent=4)
     return args
 
 def parse_args_and_init(ident: str) -> tuple[str, EvoParams, tuple[Dataset, Dataset], Optional[OpenAIPredictor | LocalPredictor]]:
@@ -86,7 +93,7 @@ def parse_args_and_init(ident: str) -> tuple[str, EvoParams, tuple[Dataset, Data
     if args.debug:
         api = None
     else:
-        api = LocalPredictor(args.model, args.temp) if args.local else OpenAIPredictor(args.model)
+        api = LocalPredictor(args.model, args.temp) if args.local else OpenAIPredictor(args.model, args.openai)
 
     suff, infer, train, eval_data = utils.load_splits(args.ds, args.split)
 
