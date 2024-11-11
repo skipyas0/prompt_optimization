@@ -208,7 +208,10 @@ def map_code_contests(example):
     question = example['description']
     test_inputs = [x.strip().split('\n') for x in example['private_tests']['input']]
     test_outputs = [x.strip() for x in example['private_tests']['output']]
-    max_time = float(example['time_limit']['seconds'])
+    if example['time_limit']:
+        max_time = int(example['time_limit']['seconds'])
+    else:
+        max_time = 3
     return {
         'question': question,
         'test_inputs': test_inputs,

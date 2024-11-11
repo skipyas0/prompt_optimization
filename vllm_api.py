@@ -41,7 +41,7 @@ class OpenAIPredictor:
                 messages=msgs,
                 temp=temp
             )
-            print(completion)
+            #print(completion)
         except openai.BadRequestError as e:
             print(f"WARNING: openai.BadRequestError for: {msgs}")
             completion = {"error": "openai.BadRequestError", "choices": [{"message": {"content": str(e)}}]}

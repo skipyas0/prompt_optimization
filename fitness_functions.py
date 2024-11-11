@@ -46,7 +46,7 @@ def binary_match(ground: str, sample: str) -> float:
 def run_code(test_cases: dict[str, list[str]], tested_code: str) -> float:
     test_input = test_cases['test_inputs']
     test_output = test_cases['test_outputs']
-    time_limit = test_cases['max_time']
+    time_limit = int(test_cases['max_time'])
     # if LLM used markdown despite being asked not to
     parts = tested_code.split('```')
     if len(parts) == 3:

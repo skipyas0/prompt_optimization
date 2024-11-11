@@ -120,6 +120,7 @@ class EvolutionaryAlgorithm():
                 "Step duration": time() - t
             })
             self.population_through_steps.append(self.population)
+            print(f"Step {i} complete")
 
     def populate(self) -> None:
         """
@@ -157,7 +158,7 @@ class EvolutionaryAlgorithm():
             trait_text = self.gen(
                 self.metaprompts[trait_name].format({
                 "metapersona": self.metapersona,
-                "examples": self.params.examples_for_initial_generation,
+                "examples": random.shuffle(self.params.examples_for_initial_generation),
                 "metastyle": self.metastyle,
                 "length": seed.random_length(self.params.points_range,
                                              self.params.sentences_per_point_range)

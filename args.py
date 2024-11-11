@@ -19,7 +19,7 @@ def parse_args(ident: str):
     parser.add_argument('--trait_mutation_percentage', type=float, default=1.0, help='Portion of traits mutated when mutating prompt specimen')
     parser.add_argument('--max_iters', type=int, default=10, help='Maximum number of iterations')
     parser.add_argument('--evolution_mode', type=str, choices=['GA', 'DE'], default='GA', help="Mode of evolution: 'GA' or 'DE'")
-    parser.add_argument('--selection_mode', type=str, choices=['rank', 'roulette', 'tournament'], default='rank', help="Selection mode: 'rank', 'roulette', or 'tournament'")
+    parser.add_argument('--selection_mode', type=str, choices=['rank','exp_rank','random', 'roulette', 'tournament'], default='rank', help="Different ways of constructing the mating pool in each step.")
     parser.add_argument('--tournament_group_size', type=int, default=3, help='Size of the tournament group for tournament selection')
     parser.add_argument('--train_batch_size', type=int, default=4, help='Batch size for training')
     parser.add_argument('--log', action='store_true', default=True, help='Enable logging (default: True)')
@@ -55,7 +55,10 @@ def parse_args(ident: str):
             args.model = m
 
     if args.log:
-        args_dict = vars(args)
+        if type(args) == utils.DotDict:
+            args_dict = args
+        else:
+            args_dict = vars(args)
         args_dict["type"] = "args"
         with open(f"runs/{ident}/results.ndjson", 'w') as f:
             f.write(json.dumps(vars(args)) + '\n')

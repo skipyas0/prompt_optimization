@@ -17,19 +17,20 @@ if __name__ == "__main__":
 
     suff, evo_params, splits, api = parse_args_and_init(ident)
     train, eval_data = splits
-    
     usage_handle, score_handle = utils.create_api_handles(api, log_file, evo_params.scorer)
     usage_EA = lambda prompt: usage_handle(prompt, evo_params.temp)
     usage_solve = lambda prompt: usage_handle(prompt, evo_params.sol_temp)
     prompt_params = PromptParams(usage_solve, score_handle, log_file, suff)
     evo_params.prompt_params = prompt_params
     EA = EvolutionaryAlgorithm(evo_params, usage_EA, train)
+    print("Init done")
     t1 = time()
     
     EA.populate()
     t2 = time()
     EA.run()
     t3 = time()
+    print("Run complete, starting eval")
     best_prompts = eval.best_prompts_from_each_gen(EA.all_prompts)
     generation_scores = eval.evaluate_progression(best_prompts, eval_data)
     step_scores = eval.evaluate_progression(EA.population_through_steps, eval_data)
@@ -46,7 +47,7 @@ if __name__ == "__main__":
     baseline_scores = {name: eval.calculate_baseline(eval_data, baseline, prompt_params) for name, baseline in baseline_suffixes.items()}
     scores_gen.update(baseline_scores)
     scores_steps.update(baseline_scores)
-
+    
     
     eval.plot_generations(scores_gen, ident, "generations")
     eval.plot_generations(scores_steps, ident, "steps")
