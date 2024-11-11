@@ -37,6 +37,8 @@ class PromptParams():
         self.log_file = log_file
         self.metaprompt = metaprompt.solve
         self.format_enforment_suffix = format_enforcement_suffix
+        self.code = self.format_enforment_suffix == metaprompt.formatting_enforcement_suffixes['code']
+        
 class Prompt():
     def __init__(self, traits: list[Trait] | dict, params: PromptParams) -> None: 
         if isinstance(traits, dict):   
@@ -53,8 +55,8 @@ class Prompt():
             self.params = params
             self.traits = traits
             self.n_traits = len(self.traits)
-            self.fitness = float('-inf')
-            self.best_fitness = float('-inf')
+            self.fitness = 0
+            self.best_fitness = 0
             self.generation_number = 1
             self.result = ["",""]
             self.id = randint(10000000, 99999999)
@@ -94,7 +96,7 @@ class Prompt():
             })) 
             for task in batch]
         
-        ground_truths = [task['answer'] for task in batch]
+        ground_truths = batch if self.params.code else [task['answer'] for task in batch]
         fitness_scores = [self.params.evaluation_handle(ground, gen) for ground, gen in zip(ground_truths, results)]
         self.best_fitness, self.result = max(zip(fitness_scores, results)) # save result with best performance on 
         self.fitness = sum(fitness_scores) / len(fitness_scores)
@@ -111,12 +113,12 @@ class Prompt():
         return new
     
         
-    def log(self) -> None:
+    def log(self, p_type="prompt") -> None:
         """
         Add entry about self to .ndjson defined in PromptParams.
         """
         log_entry = {
-            'type': "prompt",
+            'type': p_type,
             'id': self.id,
             'parent_ids': self.parent_ids,
             'generation': self.generation_number,

@@ -1,33 +1,55 @@
 from prompt import Prompt
 from evolutionary import EvoParams
-import torch
-from random import sample
+from random import sample, random
 from stats import stats
+import bisect
 
 def rank_selection(population: list[Prompt], params: EvoParams) -> list[Prompt]:
     """
     Individuals are ranked based on their fitness, and selection is done based on rank.
     """
     mating_pool = sorted(population, 
-                    key=lambda s: s.fitness, 
+                    key=lambda p: p.fitness, 
                     reverse=True)[:params.mating_pool_size]
     
     return mating_pool
         
-    
+def exp_rank_selection(population: list[Prompt], params: EvoParams) -> list[Prompt]:
+    """
+    Individuals are ranked based on their fitness. The probability of choosing a prompt is given by round(a^(rank)).
+    Variant of roulette selection.
+    """
+    a = 2 # exp base
+    ranked = sorted(population, 
+                    key=lambda p: p.fitness)
+    counts = map(lambda p: a**p.fitness, ranked)
+    mating_pool = sample(ranked, params.mating_pool_size, counts=counts)
+
+    return mating_pool
+
 def roulette_selection(population: list[Prompt], params: EvoParams) -> list[Prompt]:
     """
     Individuals are selected with a probability proportional to their fitness. 
     The better the fitness, the higher the probability of being selected.
     """
-
-    sm_scores = torch.softmax(torch.tensor([s.fitness for s in population]), dim=0)
-    counts = map(int,(10 * sm_scores / sm_scores.min()).ceil().tolist())
-
-    mating_pool = sample(population, params.mating_pool_size,
-                            counts=counts)
+    # Calculate cumulative probability array
+    fitness_values = [p.fitness for p in population]
+    total_fitness = sum(fitness_values)
+    cumulative_probabilities = []
+    cumulative_sum = 0
+    for fitness in fitness_values:
+        cumulative_sum += fitness / total_fitness
+        cumulative_probabilities.append(cumulative_sum)
     
-    return mating_pool
+    # Roulette wheel selection
+    selection = []
+    for _ in range(params.mating_pool_size):
+        rand = random()
+        selected_index = bisect.bisect_left(cumulative_probabilities, rand)
+        selection.append(population[selected_index])
+    
+    return selection
+
 
 def tournament_selection(population: list[Prompt], params: EvoParams) -> list[Prompt]:
     """
@@ -56,6 +78,7 @@ def filter_similar(population: list[Prompt], params: EvoParams) -> list[Prompt]:
     Update similarity for each prompt
     """
     ix_to_pop = set()
+
     # mark prompts that have a duplicate for removal
     for i, p1 in enumerate(population):
         sims = []

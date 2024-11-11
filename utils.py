@@ -22,6 +22,7 @@ def load_dataset_and_preprocess(ds_name: str) -> tuple[str, Dataset]:
     """
     if ds_name == 'openai/gsm8k':
         ds = load_dataset(ds_name, 'main', split='train')
+        ds = ds.map(map_gsm8k, remove_columns=ds.column_names)
         ans_type = 'numeric'
     elif re.fullmatch('^maveriq/bigbenchhard/[a-z]+(_[a-z]+)*$', ds_name):
         subset = ds_name.split('/')[-1]
@@ -43,6 +44,11 @@ def load_dataset_and_preprocess(ds_name: str) -> tuple[str, Dataset]:
         ds = ds.cast_column('answer', Value('string'))
         ds = ds.map(map_mmlu, remove_columns=ds.column_names)
         ans_type = 'choice'
+    elif ds_name == 'deepmind/code_contests':
+        ds = load_dataset(ds_name, split='train')
+        ds = ds.filter(lambda ex: ex['difficulty']  == 7 and '<image>' not in ex['description']) # filter easy samples 
+        ds = ds.map(map_code_contests, remove_columns=ds.column_names)
+        ans_type = 'code'
     else:
         raise KeyError(f"Unsupported dataset {ds_name}")
     return ans_type, ds
@@ -112,7 +118,7 @@ def log_usage(log_file: str, input: str | tuple[str, str], output: str | float) 
     else:
         log_entry = {
             'type': "score",
-            'ground': input[0],
+            'ground': f"[[{input[0]}]]",
             'in': input[1],
             'out': output,
         }
@@ -120,7 +126,7 @@ def log_usage(log_file: str, input: str | tuple[str, str], output: str | float) 
     with open(log_file, 'a') as f:
         f.write(json.dumps(log_entry) + '\n')
 
-def create_api_handles(api: Optional[OpenAIPredictor], log_file: str, scorer: str) -> tuple[Callable[[str, float], str], Callable[[str], float]]:
+def create_api_handles(api: Optional[OpenAIPredictor], log_file: str, scorer: str) -> tuple[Callable[[str, float], str], Callable[[str | dict[str, list[str],str]], float]]:
     if api is None:
         #fast debug to replace LLM calls 
         def scramble(input: str, _: float) -> str:
@@ -136,6 +142,8 @@ def create_api_handles(api: Optional[OpenAIPredictor], log_file: str, scorer: st
             score_helper = lambda ground, x: ff.ask_llm_to_compare(ground, x, usage_handle)
         elif scorer == "binary_match":
             score_helper = lambda ground, x: ff.binary_match(ground, x)
+        elif scorer == "run_code":
+            score_helper = lambda task, x: ff.run_code(task, x)
         elif scorer == "levenshtein":
             from Levenshtein import ratio            
             score_helper = ratio
@@ -151,13 +159,7 @@ def create_api_handles(api: Optional[OpenAIPredictor], log_file: str, scorer: st
         log_usage(log_file, input, out)
         return out
     
-    def score_handle(ground: str, input: str) -> float:
-
-        # if this is the gsm8k dataset, the answer is EXPLANATION #### NUMERIC ANSWER
-        spl = ground.split("####")
-        if len(spl) == 2:
-            ground = spl[1].strip()
-
+    def score_handle(ground: str | dict[str, list[str]], input: str) -> float:
         out = score_helper(ground, input)
         log_usage(log_file, (ground, input), out)
         return out
@@ -195,6 +197,21 @@ def map_mmlu(example):
     example['question'] = example['question'] + '\n' + '\n'.join([f'{op}: {op_text}' for op, op_text in zip("ABCD", example['choices'])])
     example['answer'] = "ABCD"[int(example['answer'])]
     return {'question': example['question'], 'answer': example['answer']}
+
+def map_gsm8k(example):
+    example['question'] = example['question']
+    example['answer'] = example['answer'].split('####')[1].replace('\xa0', '').strip()
+    return {'question': example['question'], 'answer': example['answer']}
+
+
+def map_code_contests(example):
+    example['question'] = example['description']# + '\nExample input/output pair:\nInput:' + str(example['public_tests']['input']) + '\nOutput:' + str(example['public_tests']['output'])
+    #first_python = example['solutions']['language'].index(3)
+    #example['solution'] = example['solutions']['solution'][first_python]
+    example['test_inputs'] = [x.strip().split('\n') for x in example['private_tests']['input']]
+    example['test_outputs'] = [x.strip() for x in example['private_tests']['output']]
+    example['max_time'] = float(example['time_limit']['seconds'])
+    return {'question': example['question'], 'test_inputs': example['test_inputs'], 'test_outputs': example['test_outputs'], 'max_time': example['time_limit']}
 
 class DotDict(dict):
     """A dictionary that supports dot notation access."""

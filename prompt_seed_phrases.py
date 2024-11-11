@@ -212,6 +212,49 @@ motivational_phrases = [
     "I’m doing it for my own satisfaction."
 ]
 
+cot_prompts = [
+    "Let's break down the problem step-by-step to find a solution.",
+    "First, let’s understand the goal and any sub-goals needed to solve this.",
+    "To approach this problem, let's identify the main components and tackle them one by one.",
+    "Let’s start by considering any similar problems and how they were solved.",
+    "Let's list what we know and what we need to find out.",
+    "What initial steps can we take to simplify this problem?",
+    "Let's analyze the problem carefully and list any possible approaches.",
+    "Let’s outline the steps we need to take to reach a solution.",
+    "To solve this, let’s divide the problem into manageable parts.",
+    "Let’s clarify each part of the problem and solve each step-by-step.",
+    "Let's identify any assumptions we’re making and verify them.",
+    "What logical steps should we follow to tackle this problem?",
+    "Let’s start by reviewing the information given and noting any useful patterns.",
+    "Let’s hypothesize a solution path and test it with the data provided.",
+    "Let’s examine the problem for any underlying principles or rules.",
+    "To proceed, let’s determine any constraints and how they might affect our solution.",
+    "Let’s break down the problem into smaller questions we can answer first.",
+    "To solve this, let’s identify what information is essential and what can be ignored.",
+    "Let’s evaluate potential methods and consider the pros and cons of each.",
+    "Let’s take a closer look at each component of the problem and verify our approach.",
+    "Let's begin by understanding the problem fully. We should clarify what is being asked, identify any constraints or requirements, and consider any underlying assumptions we may have. Breaking down the question first will help us avoid unnecessary steps later.",
+    "To solve this, let’s start by identifying any patterns or similarities with known problems. We can look for parts of the problem that remind us of simpler examples or solutions we've seen before, and see if those methods apply here. Often, simplifying a problem is a great first step.",
+    "Let's think about the main goal and the possible paths to achieve it. We should outline the overall objective first, and then brainstorm any sub-tasks or smaller questions that need answering along the way. Each smaller question will guide us closer to the final answer.",
+    "Let’s work through this problem by analyzing each piece of information separately. We'll assess what each piece means in the context of the problem, whether it suggests any initial steps, and how it might connect to other pieces. Understanding the role of each part will make it easier to approach the solution.",
+    "Let's list any assumptions we are making and check if they hold true. Assumptions can shape how we interpret a problem, so we’ll want to ensure that each one is valid and that we aren't overlooking potential exceptions or alternative interpretations.",
+    "To clarify our approach, let’s map out the problem into a logical sequence of steps. We'll determine an initial step to get started, and then outline each subsequent step based on the results we expect from the previous ones. This approach will help us stay organized and avoid confusion.",
+    "Let's consider any constraints and explore how they impact our solution options. Constraints might limit certain approaches or prioritize others, so we’ll keep them in mind as we outline possible methods. Sometimes constraints can even suggest an efficient approach directly.",
+    "Let's try making an educated guess or hypothesis and use it to test our understanding of the problem. By running a hypothetical scenario, we can often identify areas we need to refine or correct before we dive into detailed calculations or code. Testing a hypothesis first can save us time and effort later.",
+    "To make the problem more manageable, let’s divide it into smaller, independent parts we can solve individually. Once each part is addressed, we’ll combine the solutions to see if they form a complete answer. Tackling one small piece at a time will make the overall solution clearer.",
+    "Let’s take a moment to review our solution process at each step to ensure accuracy and alignment with the goal. After each step, we’ll double-check if our results still fit the requirements and if we’re moving toward the solution. This habit of reflection can help us catch mistakes early and keep our focus.",
+    "Alright, first, let’s just get a handle on what this question is asking. Sometimes reading through the problem again slowly can help us spot any details we missed. Let’s make sure we totally understand the goal here.",
+    "Let’s try breaking this down into simpler parts. If we can tackle one small piece at a time, it might not seem as overwhelming. We can always put the pieces together later!",
+    "Maybe we can start by writing out what we know so far. We can list any facts, numbers, or details given in the question and think about how each one might fit into the solution.",
+    "How about we try solving a super basic version of this problem first? Like, if we just pretend it’s a really simple case, we might see a pattern or get a hint about what we need to do for the real question.",
+    "Let’s make a quick plan. We’ll jot down a few steps or ideas that come to mind and then see if they seem like they’ll get us closer to the answer. It doesn’t have to be perfect yet—just an outline to get us started.",
+    "Before we jump into solving it, let’s think about whether there are any rules or formulas we should use here. Sometimes just identifying a formula or strategy can be half the battle.",
+    "We could try working backwards from the answer we want. Like, if we know where we need to end up, maybe we can figure out a path back to the start. Working backwards can sometimes make things way clearer!",
+    "Okay, let’s think about if there are any things we’re assuming without realizing it. Sometimes, we assume a certain fact is true without questioning it, which could steer us in the wrong direction. Let's question everything and see what holds up.",
+    "Let’s try to imagine what the solution would look like if we solved it. Sometimes, picturing the final answer can give us clues about how to start or what steps we need to take to get there.",
+    "How about we go through this step-by-step together? We can try each step and then pause to check if it makes sense before moving on to the next one. Slow and steady can help us avoid mistakes!"
+]
+
 def random_length(points_range: tuple[int, int], sentences_per_point_range: tuple[int, int]) -> str:
     a, b = points_range
     points = random.randint(a,b)

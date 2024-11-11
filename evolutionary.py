@@ -30,13 +30,14 @@ class EvoParams():
                  filter_similar_method: str = "None",
                  filter_th: float = 0.95,
                  examples_for_initial_generation: str = "",
-                 repop_method_proportion: float = 1.0,
+                 repop: float = 1.0,
                  metapersonas: bool = False,
                  metastyles: bool = False,
                  points_range: tuple[int, int] = (3,6),
                  sentences_per_point_range: tuple[int, int] = (1,3),
                  temp: float = 0.5,
-                 sol_temp: float = 0.25)-> None:
+                 sol_temp: float = 0.25,
+                 gen_pop_lamarck: bool = False)-> None:
         self.initial_population_size = initial_population_size
         self.population_change_rate = population_change_rate
         self.mating_pool_size = mating_pool_size
@@ -59,7 +60,7 @@ class EvoParams():
         self.examples_for_initial_generation = examples_for_initial_generation
         self.bert = None
         self.similarity_scorer = self.get_similarity_scoring_handle()
-        self.repop_method_proportion=repop_method_proportion
+        self.repop=repop
         self.prompt_params: Optional[PromptParams]=None
         self.metapersonas = metapersonas
         self.metastyles = metastyles
@@ -68,6 +69,7 @@ class EvoParams():
         self.format_enforcement_suffix = ""
         self.temp = temp
         self.sol_temp = sol_temp
+        self.gen_pop_lamarck = gen_pop_lamarck
 
     def get_similarity_scoring_handle(self) -> Optional[Callable[[Prompt, Prompt], float]]:
         """
@@ -103,16 +105,17 @@ class EvolutionaryAlgorithm():
         self.metaprompts = mp.metaprompts_dict
         self.gen = generation_handle 
         self.tasks = tasks
-        self.step = self.ga_step if self.params.evolution_mode=='GA' else None
+        self.pop_function = self.create_prompt_lamarck if self.params.gen_pop_lamarck else self.random_cot_prompt
         
     def run(self) -> None:
         """
         Run EvolutionaryAlgorithm to max iterations.
         """
-        for i in range(self.params.max_iters):
+        for i in range(self.params.max_iters+1):
             stats.start_step()
             t = time()
-            self.step()
+            just_eval = i == self.params.max_iters
+            self.ga_step(just_eval)
             stats.add_to_current_step({
                 "Step duration": time() - t
             })
@@ -123,21 +126,27 @@ class EvolutionaryAlgorithm():
         Generate initial prompts based on task input/output samples.
         """
         for _ in range(self.params.initial_population_size):
-            new = self.create_prompt_lamarck()    
+            new = self.pop_function()
             self.population.append(new)
 
     def repopulate(self) -> None:
         #print(f"in repopulate, will add {self.params.mating_pool_size - self.pop_size}")
         new_prompts = []
         for _ in range(self.params.mating_pool_size - self.pop_size):
-            if self.pop_size < 1 or random.random() < self.params.repop_method_proportion:
-                new = self.create_prompt_lamarck()
+            if self.pop_size < 1 or random.random() < self.params.repop:
+                new = self.pop_function()
             else:
                 template = random.choice(self.population)
                 new = self.create_prompt_mutate_from_template(template)
             new_prompts.append(new)
         self.population += new_prompts
 
+    def random_cot_prompt(self) -> Prompt:
+        t = Trait(random.choice(seed.cot_prompts))
+        res = Prompt([t], self.params.prompt_params)
+        res.bert_embedding = self.params.bert.get_bert_embedding(str(res))
+        return res
+    
     def create_prompt_lamarck(self) -> Prompt:
         """
         Construct a new prompt specimen using metainstructions with task in/out examples.
@@ -160,8 +169,7 @@ class EvolutionaryAlgorithm():
             )
 
         res = Prompt(traits, self.params.prompt_params)
-        if self.params.filter_similar_method == 'bert':
-            res.bert_embedding = self.params.bert.get_bert_embedding(str(res))
+        res.bert_embedding = self.params.bert.get_bert_embedding(str(res))
 
         stats.add_to_current_step({"New prompt generation": 1})
         return res
@@ -178,11 +186,13 @@ class EvolutionaryAlgorithm():
             res.bert_embedding = self.params.bert.get_bert_embedding(str(res))
         return res
 
-    def ga_step(self) -> None:
+    def ga_step(self, just_eval=False) -> None:
         """
         One step of Genetic Algorithm.
         """
         self.population = self.selection()
+        if just_eval:
+            return
         
         # GA crossover procedure
         lotto = range(self.params.mating_pool_size)
@@ -198,8 +208,7 @@ class EvolutionaryAlgorithm():
                 if random.random() < self.params.prompt_mutation_probability:
                         self.mutate(res)
 
-            if self.params.filter_similar_method == 'bert':
-                res.bert_embedding = self.params.bert.get_bert_embedding(str(res))
+            res.bert_embedding = self.params.bert.get_bert_embedding(str(res))
             offsprings.append(res)
 
         self.population += offsprings

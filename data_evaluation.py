@@ -89,7 +89,9 @@ def calculate_baseline(eval_data: Dataset, baseline_prompt: Prompt, prompt_param
     """
     trait = Trait(baseline_prompt, 'suffix', False)
     prompt = Prompt([trait], prompt_params)
-    return [prompt.calculate_fitness(eval_data)]
+    f = prompt.calculate_fitness(eval_data)
+    prompt.log("baseline")
+    return [f]
 
 if __name__ == "__main__":
     slurm_id = argv[1]
