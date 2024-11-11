@@ -205,13 +205,17 @@ def map_gsm8k(example):
 
 
 def map_code_contests(example):
-    example['question'] = example['description']# + '\nExample input/output pair:\nInput:' + str(example['public_tests']['input']) + '\nOutput:' + str(example['public_tests']['output'])
-    #first_python = example['solutions']['language'].index(3)
-    #example['solution'] = example['solutions']['solution'][first_python]
-    example['test_inputs'] = [x.strip().split('\n') for x in example['private_tests']['input']]
-    example['test_outputs'] = [x.strip() for x in example['private_tests']['output']]
-    example['max_time'] = float(example['time_limit']['seconds'])
-    return {'question': example['question'], 'test_inputs': example['test_inputs'], 'test_outputs': example['test_outputs'], 'max_time': example['time_limit']}
+    question = example['description']
+    test_inputs = [x.strip().split('\n') for x in example['private_tests']['input']]
+    test_outputs = [x.strip() for x in example['private_tests']['output']]
+    max_time = float(example['time_limit']['seconds'])
+    return {
+        'question': question,
+        'test_inputs': test_inputs,
+        'test_outputs': test_outputs,
+        'max_time': max_time
+    }
+
 
 class DotDict(dict):
     """A dictionary that supports dot notation access."""

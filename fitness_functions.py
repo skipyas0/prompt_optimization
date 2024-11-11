@@ -58,7 +58,6 @@ def run_code(test_cases: dict[str, list[str]], tested_code: str) -> float:
     signal.signal(signal.SIGALRM, handler)
     signal.alarm(time_limit)  # Timeout in seconds
     res = []
-    outputs = []
     for i in range(len(test_input)):
         score = 0
         f = io.StringIO()
@@ -68,13 +67,12 @@ def run_code(test_cases: dict[str, list[str]], tested_code: str) -> float:
                 local_vars = {"input": lambda: next(inp)}
                 exec(tested_code, {}, local_vars)
                 score += 0.1
-                outputs.append("succ")
             except TimeoutError:
-                outputs.append("time")
+                score += 0.05
             except SyntaxError:
-                outputs.append("syntax")
+                pass
             except Exception as e:
-                outputs.append("other " + str(e))
+                pass
             finally:
                 signal.alarm(0)
         captured_output = f.getvalue().strip()
@@ -84,13 +82,9 @@ def run_code(test_cases: dict[str, list[str]], tested_code: str) -> float:
         #print("expected:", test_output[i])
         if captured_output == test_output[i]:
             score += 0.9
-            outputs[-1]+=" and CORRECT"
-        else:
-            outputs[-1]+=" WRONG OUTPUT"
         res.append(score)
-    print(outputs)
     
     # Full score only if all tests are passed
-    if all([x == 1.0 for x  in res]):
+    if all([x == 1.0 for x in res]):
         return 1.0
     return 0.75 * sum(res) / len(res)
