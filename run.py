@@ -13,20 +13,23 @@ if __name__ == "__main__":
     ident = getenv("SLURM_JOB_ID") or datetime.now().strftime('%H-%M-%S_%d-%m-%Y')
     mkdir(f"runs/{ident}")
     mkdir(f"runs/{ident}/plots")
-    log_file = f"runs/{ident}/results.ndjson"
-
+    mkdir(f"runs/{ident}/steps")
+    log_file_handles = f"runs/{ident}/results.ndjson"
+    log_file_prompts = f"runs/{ident}/steps/" + "step{}.ndjson"
     suff, evo_params, splits, api = parse_args_and_init(ident)
     train, eval_data = splits
-    usage_handle, score_handle = utils.create_api_handles(api, log_file, evo_params.scorer)
+    usage_handle, score_handle = utils.create_api_handles(api, log_file_handles, evo_params.scorer)
     usage_EA = lambda prompt: usage_handle(prompt, evo_params.temp)
     usage_solve = lambda prompt: usage_handle(prompt, evo_params.sol_temp)
-    prompt_params = PromptParams(usage_solve, score_handle, log_file, suff)
+    prompt_params = PromptParams(usage_solve, score_handle, log_file_prompts, suff)
     evo_params.prompt_params = prompt_params
     EA = EvolutionaryAlgorithm(evo_params, usage_EA, train)
     print("Init done")
     t1 = time()
-    
-    EA.populate()
+    if len(evo_params.continue_run) > 0:
+        EA.load_population(evo_params.continue_run)
+    else: 
+        EA.populate()
     t2 = time()
     EA.run()
     t3 = time()

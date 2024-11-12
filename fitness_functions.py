@@ -3,7 +3,7 @@ from utils import parse_verdict, parse_answer
 from random import random
 import re
 import io
-import signal
+import multiprocessing
 from contextlib import redirect_stdout
 def ask_llm_to_compare(ground: str, sample: str, gen_handle: Callable[[str], str]) -> float:
     """
@@ -43,43 +43,48 @@ def binary_match(ground: str, sample: str) -> float:
             return 1.0
     return 0.0
 
+
+def my_exec(input_data, code, queue):
+    f = io.StringIO()
+    inp = iter(input_data)
+    local_vars = {"input": lambda: next(inp)}
+    with redirect_stdout(f):
+        exec(code, {}, local_vars)
+    # Send the captured output back to the main process
+    queue.put(f.getvalue().strip())
+
 def run_code(test_cases: dict[str, list[str]], tested_code: str) -> float:
     test_input = test_cases['test_inputs']
     test_output = test_cases['test_outputs']
-    time_limit = int(test_cases['max_time'])
     # if LLM used markdown despite being asked not to
     parts = tested_code.split('```')
     if len(parts) == 3:
         tested_code = '\n'.join(parts[1].split('\n')[1:])
     
-    def handler(signum, frame):
-        raise TimeoutError("Execution exceeded time limit.")
-
-    signal.signal(signal.SIGALRM, handler)
-    signal.alarm(time_limit)  # Timeout in seconds
     res = []
     for i in range(len(test_input)):
         score = 0
-        f = io.StringIO()
-        inp = iter(test_input[i])
-        with redirect_stdout(f):
-            try:
-                local_vars = {"input": lambda: next(inp)}
-                exec(tested_code, {}, local_vars)
-                score += 0.1
-            except TimeoutError:
-                score += 0.05
-            except SyntaxError:
-                pass
-            except Exception as e:
-                pass
-            finally:
-                signal.alarm(0)
-        captured_output = f.getvalue().strip()
+        queue = multiprocessing.Queue()  # Queue to capture output
+        try:
+            # Set up a separate process for code execution
+            p = multiprocessing.Process(target=my_exec, args=(test_input[i], tested_code, queue))
+            p.start()
+            p.join(3)  # Wait for 3 seconds
 
-        # Compare the captured output to the expected output
-        #print("output:", captured_output)
-        #print("expected:", test_output[i])
+            if p.is_alive():
+                # If process is still running, terminate it
+                p.terminate()
+                print("Process exceeded time limit.")
+                score += 0.05
+                captured_output = "" 
+            else:
+                score += 0.1 
+                captured_output = queue.get() if not queue.empty() else ""
+            
+        except Exception as e:
+            print(f"Unexpected exception occurred: {e}")
+            captured_output = ""
+
         if captured_output == test_output[i]:
             score += 0.9
         res.append(score)

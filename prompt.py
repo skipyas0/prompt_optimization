@@ -108,12 +108,12 @@ class Prompt():
         new.generation_number = self.generation_number
         new.fitness = self.fitness
         new.best_fitness = self.best_fitness
-        new.id = self.id
+        new.id = randint(10000000, 99999999)
         new.parent_ids = self.parent_ids
         return new
     
         
-    def log(self, p_type="prompt") -> None:
+    def log(self, step: int, p_type: str="prompt") -> None:
         """
         Add entry about self to .ndjson defined in PromptParams.
         """
@@ -130,6 +130,6 @@ class Prompt():
             'maximum_similarity': float(self.maximum_similarity)
             #'bert_embedding': self.bert_embedding
         }
-        with open(self.params.log_file, 'a') as f:
+        with open(self.params.log_file.format(step), 'a') as f:
             f.write(json.dumps(log_entry) + '\n')
             #f.write(f"Prompt gen: {self.generation_number}\n\n***\n{str(self)}\n***\nTask with best result:\n{self.result[0]}\nResult:\n{self.result[1]}\n\nScore: {self.fitness}\n\n######")

@@ -7,6 +7,8 @@ import prompt_seed_phrases as seed
 import metaprompt as mp
 from stats import stats
 from time import time
+import os
+import json
 class EvoParams(): 
     """
     Collection of parameters for evolutionary algorithm
@@ -37,7 +39,8 @@ class EvoParams():
                  sentences_per_point_range: tuple[int, int] = (1,3),
                  temp: float = 0.5,
                  sol_temp: float = 0.25,
-                 gen_pop_lamarck: bool = False)-> None:
+                 gen_pop_lamarck: bool = False,
+                 continue_run: str = "")-> None:
         self.initial_population_size = initial_population_size
         self.population_change_rate = population_change_rate
         self.mating_pool_size = mating_pool_size
@@ -70,6 +73,7 @@ class EvoParams():
         self.temp = temp
         self.sol_temp = sol_temp
         self.gen_pop_lamarck = gen_pop_lamarck
+        self.continue_run = continue_run
 
     def get_similarity_scoring_handle(self) -> Optional[Callable[[Prompt, Prompt], float]]:
         """
@@ -106,7 +110,7 @@ class EvolutionaryAlgorithm():
         self.gen = generation_handle 
         self.tasks = tasks
         self.pop_function = self.create_prompt_lamarck if self.params.gen_pop_lamarck else self.random_cot_prompt
-        
+        self.step = 0
     def run(self) -> None:
         """
         Run EvolutionaryAlgorithm to max iterations.
@@ -121,6 +125,7 @@ class EvolutionaryAlgorithm():
             })
             self.population_through_steps.append(self.population)
             print(f"Step {i} complete")
+            self.step += 1
 
     def populate(self) -> None:
         """
@@ -129,6 +134,17 @@ class EvolutionaryAlgorithm():
         for _ in range(self.params.initial_population_size):
             new = self.pop_function()
             self.population.append(new)
+
+    def load_population(self, ident) -> None:
+        steps_path = f"runs/{ident}/steps"
+        n_files = len(os.listdir(steps_path))
+        for i in range(n_files-1, -1, -1):
+            with open(steps_path+f"step{i}.ndjson", "r") as f:
+                lines = f.readlines()
+                if len(lines) == self.params.initial_population_size:
+                    self.population = [Prompt(json.loads(l), self.params.prompt_params) for l in lines]
+                    break
+        raise ValueError("This run does not have the same population size.")
 
     def repopulate(self) -> None:
         #print(f"in repopulate, will add {self.params.mating_pool_size - self.pop_size}")
@@ -152,13 +168,16 @@ class EvolutionaryAlgorithm():
         """
         Construct a new prompt specimen using metainstructions with task in/out examples.
         """
+        def examples_prep_helper():
+            random.shuffle(self.params.examples_for_initial_generation)
+            return '\n'.join(self.params.examples_for_initial_generation)
 
         traits = []
         for trait_name in self.params.trait_ids:
             trait_text = self.gen(
                 self.metaprompts[trait_name].format({
                 "metapersona": self.metapersona,
-                "examples": random.shuffle(self.params.examples_for_initial_generation),
+                "examples": examples_prep_helper(),
                 "metastyle": self.metastyle,
                 "length": seed.random_length(self.params.points_range,
                                              self.params.sentences_per_point_range)
@@ -228,7 +247,7 @@ class EvolutionaryAlgorithm():
         for s in self.population:
             s.calculate_fitness(task_batch)
             if self.params.log:
-                s.log()
+                s.log(self.step)
 
         # apply specified deduplication method before fitness based selection
         if self.params.similarity_scorer:

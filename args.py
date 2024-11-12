@@ -10,6 +10,7 @@ def parse_args(ident: str):
     parser = argparse.ArgumentParser(description="Prompt optimalization with evolutionary algorithm")
     parser.add_argument('model', type=str, help='Model used for generation (huggingface link), mandatory argument. In debug mode use eg. "". ')
     parser.add_argument('--copy', type=str, default='', help="Copy all other args except for model from given ident.")
+    parser.add_argument('--continue_run', type=str, default='', help="Copy all other args except for model from given ident and start from the last completed evolution step in that run.")
     parser.add_argument('--initial_population_size', type=int, default=10, help='Initial size of the population')
     parser.add_argument('--population_change_rate', type=int, default=0, help='Rate of population change')
     parser.add_argument('--mating_pool_size', type=int, default=6, help='Size of the mating pool')
@@ -45,7 +46,9 @@ def parse_args(ident: str):
 
     if args.ds == 'deepmind/code_contests':
         args.scorer = 'run_code'
-        
+    if len(args.continue_run) > 0:
+        args.copy = args.continue_run
+
     if len(args.copy) > 0:
         m = args.model
         with open(f"runs/{args.copy}/run_args.json", 'r') as f:
@@ -56,14 +59,14 @@ def parse_args(ident: str):
 
     if args.log:
         if type(args) == utils.DotDict:
-            args_dict = args
+            args_dict = args.to_dict()
         else:
             args_dict = vars(args)
         args_dict["type"] = "args"
         with open(f"runs/{ident}/results.ndjson", 'w') as f:
-            f.write(json.dumps(vars(args)) + '\n')
+            f.write(json.dumps(args_dict) + '\n')
         with open(f"runs/{ident}/run_args.json", 'w') as f:
-            json.dump(vars(args), f, indent=4)
+            json.dump(args_dict, f, indent=4)
     return args
 
 def parse_args_and_init(ident: str, template: Optional[str]=None) -> tuple[str, EvoParams, tuple[Dataset, Dataset], Optional[OpenAIPredictor | LocalPredictor]]:

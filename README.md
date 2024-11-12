@@ -20,9 +20,8 @@ Debug mode: *python run.py --debug*
 - personal email: skipyas0@gmail.com
 
 ## TODOs
-- try randomly varying mutation prompts with seed phrases to create more original prompts
-- rethink metaprompts, standardize syntax - use html-like tags
-- rethink template formatting, format brackets are now named to account for persona/style options in template
+- implement checkpoints to run longer evolutions in more compute sessions, redesign logging to capture all info for continuing the run
+- create stronger baselines
 
 ## Tested models
 - hugging-quants/Meta-Llama-3.1-70B-Instruct-AWQ-INT4 (2 A100)

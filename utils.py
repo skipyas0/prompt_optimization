@@ -65,24 +65,25 @@ def load_splits(ds_name: str, split: tuple[int, int, int]) -> tuple[str, Dataset
     test = ds.select(range(sum(split[:2]), sum(split)))
     return suff, infer, train, test
 
-def join_dataset_to_str(dataset: Dataset, insertion_token: str, insertion_position: Literal["prefix", "suffix"] = "prefix") -> str:   
+def join_dataset_to_str(dataset: Dataset, insertion_token: str, insertion_position: Literal["prefix", "suffix"] = "prefix") -> list[str]:   
     """
-    Join samples from datasets to single string with <in> <out> html-like tags.
+    Modify samples with <in> <out> html-like tags
     """
 
-    res = ""
+    res = []
 
     features = list(dataset.features.keys())
     q, a = features[0], features[1]
 
-    for i, sample in enumerate(dataset):
-        res += f"<{i}>\n"
-        res += insertion_token if insertion_position == "prefix" else "Follow these steps and solve the problem in a logical fashion.\n 1. Analyze the problem.\n 2. Create a plan to solve it.\n 3. Follow the plan and explain your steps.\n 4. Give your final answer.\n"
-        res += f"<{q}> {sample[q]} </{q}>\n"
-        res += insertion_token if insertion_position == "suffix" else "Let's think step by step.\n"
-        res += f"<{a}> {sample[a]} </{a}>\n"
-        res += f"</{i}>\n"
-
+    for i, sample in enumerate(dataset.shuffle()):
+        ex = ""
+        ex += f"<{i}>\n"
+        ex += insertion_token if insertion_position == "prefix" else "Follow these steps and solve the problem in a logical fashion.\n 1. Analyze the problem.\n 2. Create a plan to solve it.\n 3. Follow the plan and explain your steps.\n 4. Give your final answer.\n"
+        ex += f"<{q}> {sample[q]} </{q}>\n"
+        ex += insertion_token if insertion_position == "suffix" else "Let's think step by step.\n"
+        ex += f"<{a}> {sample[a]} </{a}>\n"
+        ex += f"</{i}>\n"
+        res.append(ex)
     return res
 
 def parse_verdict(text: str) -> str:
@@ -208,15 +209,11 @@ def map_code_contests(example):
     question = example['description']
     test_inputs = [x.strip().split('\n') for x in example['private_tests']['input']]
     test_outputs = [x.strip() for x in example['private_tests']['output']]
-    if example['time_limit']:
-        max_time = int(example['time_limit']['seconds'])
-    else:
-        max_time = 3
+    
     return {
         'question': question,
         'test_inputs': test_inputs,
         'test_outputs': test_outputs,
-        'max_time': max_time
     }
 
 
@@ -229,3 +226,8 @@ class DotDict(dict):
 
     def __setattr__(self, key, value):
         self[key] = value
+
+    def to_dict(self) -> dict:
+        d = dict()
+        d.update(self)
+        return d
