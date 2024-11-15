@@ -33,7 +33,7 @@ def roulette_selection(population: list[Prompt], params: EvoParams) -> list[Prom
     The better the fitness, the higher the probability of being selected.
     """
     # Calculate cumulative probability array
-    fitness_values = [p.fitness for p in population]
+    fitness_values = [p.fitness+0.01 for p in population]
     total_fitness = sum(fitness_values)
     cumulative_probabilities = []
     cumulative_sum = 0
