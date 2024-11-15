@@ -1,7 +1,7 @@
-# Prompt optimalization
+# Prompt optimization
 #### *Work in progress*
 This repository constains code for my bachelor's thesis on the topic of LLM prompt optimalization.
-The main focus is on optimalization through evolutionary algorithms.
+The main focus is on optimization through evolutionary algorithms.
 
 ## Usage
 As of now only possible using a SLURM job scheduler and a SLURM script on a compute cluster. 
@@ -20,8 +20,7 @@ Debug mode: *python run.py --debug*
 - personal email: skipyas0@gmail.com
 
 ## TODOs
-- implement checkpoints to run longer evolutions in more compute sessions, redesign logging to capture all info for continuing the run
-- create stronger baselines
+- Change final eval to account for new baseline and for prompt saving changes, copy prompts from old run if continuing
 
 ## Tested models
 - hugging-quants/Meta-Llama-3.1-70B-Instruct-AWQ-INT4 (2 A100)
@@ -37,6 +36,7 @@ Debug mode: *python run.py --debug*
 - maveriq/bigbenchhard
 - GBaker/MedQA-USMLE-4-options
 - cais/mmlu
+- deepmind/code_contests
 
 ## Conventions
 - Utilize HTML-like tags where possible

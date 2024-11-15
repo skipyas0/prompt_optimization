@@ -17,6 +17,8 @@ if __name__ == "__main__":
     log_file_handles = f"runs/{ident}/results.ndjson"
     log_file_prompts = f"runs/{ident}/steps/" + "step{}.ndjson"
     suff, evo_params, splits, api = parse_args_and_init(ident)
+    if len(evo_params.continue_run) > 0:
+        utils.copy_contents(f"runs/{ident}", f"runs/{evo_params.continue_run}")
     train, eval_data = splits
     usage_handle, score_handle = utils.create_api_handles(api, log_file_handles, evo_params.scorer)
     usage_EA = lambda prompt: usage_handle(prompt, evo_params.temp)
@@ -33,28 +35,30 @@ if __name__ == "__main__":
     t2 = time()
     EA.run()
     t3 = time()
-    print("Run complete, starting eval")
-    best_prompts = eval.best_prompts_from_each_gen(EA.all_prompts)
-    generation_scores = eval.evaluate_progression(best_prompts, eval_data)
-    step_scores = eval.evaluate_progression(EA.population_through_steps, eval_data)
-    
-    baseline_suffixes = {
-        "Blank": "{}",
-        "Kojima": "{}\nLet's think step by step.",  # Kojima et al. 2022
-        #"Zhou": "{}\nLet's work this out in a step by step way to be sure we have the right answer.",  # Zhou et al. 2022b
-        #"Fernando": "{}\nSOLUTION:",  # Fernando et al. 2023
-    }
-    
-    scores_gen = {"Generation": generation_scores}
-    scores_steps= {"Steps": step_scores}
-    baseline_scores = {name: eval.calculate_baseline(eval_data, baseline, prompt_params) for name, baseline in baseline_suffixes.items()}
-    scores_gen.update(baseline_scores)
-    scores_steps.update(baseline_scores)
-    
-    
-    eval.plot_generations(scores_gen, ident, "generations")
-    eval.plot_generations(scores_steps, ident, "steps")
-    eval.plot_training_stats(ident)
+    print("Run complete")
+    if evo_params.run_eval:
+        print("Starting eval")
+        best_prompts = eval.best_prompts_from_each_gen(EA.all_prompts)
+        generation_scores = eval.evaluate_progression(best_prompts, eval_data)
+        step_scores = eval.evaluate_progression(EA.population_through_steps, eval_data)
+        
+        baseline_suffixes = {
+            "Blank": "{}",
+            "Kojima": "{}\nLet's think step by step.",  # Kojima et al. 2022
+            #"Zhou": "{}\nLet's work this out in a step by step way to be sure we have the right answer.",  # Zhou et al. 2022b
+            #"Fernando": "{}\nSOLUTION:",  # Fernando et al. 2023
+        }
+        
+        scores_gen = {"Generation": generation_scores}
+        scores_steps= {"Steps": step_scores}
+        baseline_scores = {name: eval.calculate_baseline(eval_data, baseline, prompt_params) for name, baseline in baseline_suffixes.items()}
+        scores_gen.update(baseline_scores)
+        scores_steps.update(baseline_scores)
+        
+        
+        eval.plot_generations(scores_gen, ident, "generations")
+        eval.plot_generations(scores_steps, ident, "steps")
+        eval.plot_training_stats(ident)
     t4 = time()
 
     stats.set_const_stat({

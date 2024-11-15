@@ -6,6 +6,8 @@ from typing import Callable, Literal, Optional
 import random 
 from bert import bert
 from metaprompt import formatting_enforcement_suffixes
+import shutil
+import os
 def load_log_dict(path: str) -> list[dict]:
     """
     Open .ndjson and load it as list of dicts
@@ -173,6 +175,19 @@ def find_key_by_value(d, x):
         if value == x:
             return key
     return None  
+
+def copy_contents(source_folder, dest_folder):
+    if not os.path.exists(dest_folder):
+        raise NotADirectoryError(f"Check if the run number {dest_folder.split('/')[1]} has a directory")
+    for item in os.listdir(source_folder):
+        source_path = os.path.join(source_folder, item)
+        destination_path = os.path.join(dest_folder, item)
+        
+        # Check if it's a directory and copy accordingly
+        if os.path.isdir(source_path):
+            shutil.copytree(source_path, destination_path, dirs_exist_ok=True)  # dirs_exist_ok=True will overwrite if exists
+        else:
+            shutil.copy2(source_path, destination_path)
 
 def map_medqa_usmle(example):
     options_text = "\n".join(f'{k}: {v}' for k,v in example['options'].items()) 

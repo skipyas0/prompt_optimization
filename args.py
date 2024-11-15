@@ -6,10 +6,12 @@ from typing import Optional
 from vllm_api import OpenAIPredictor
 from local_api import LocalPredictor
 import json
+from datetime import datetime
+
 def parse_args(ident: str):
     parser = argparse.ArgumentParser(description="Prompt optimalization with evolutionary algorithm")
     parser.add_argument('model', type=str, help='Model used for generation (huggingface link), mandatory argument. In debug mode use eg. "". ')
-    parser.add_argument('--copy', type=str, default='', help="Copy all other args except for model from given ident.")
+    parser.add_argument('--copy_args', type=str, default='', help="Copy all other args except for model from given ident.")
     parser.add_argument('--continue_run', type=str, default='', help="Copy all other args except for model from given ident and start from the last completed evolution step in that run.")
     parser.add_argument('--initial_population_size', type=int, default=10, help='Initial size of the population')
     parser.add_argument('--population_change_rate', type=int, default=0, help='Rate of population change')
@@ -32,6 +34,7 @@ def parse_args(ident: str):
     parser.add_argument('--temp', type=float, default=0.75, help='Sampling temperature used in calls to genetic operators etc. Higher than temp used for solving tasks.')
     parser.add_argument('--sol_temp', type=float, default=0.25, help='Sampling temperature used in calls to solve tasks.')
     parser.add_argument('--local', action='store_true', help='Local mode: Instead of calling a VLLM server use a transformers pipeline.')
+    parser.add_argument('--no_eval', action='store_true', help='Do not run evaluation at the end')
     parser.add_argument('--openai', action='store_true', help='OpenAI API mode: Instead of calling a VLLM server connect to online OpenAI API with a key in .env file.')
     parser.add_argument('--debug', action='store_true', help='Debug mode: No LLM, go through evolution with scrambling text and assigning random scores.')
     parser.add_argument('--filter_similar_method', type=str, choices=['bert', 'levenshtein', 'rouge'], default='bert',help='How to filter prompts based on similarity. Applied before selection mechanism.')
@@ -46,16 +49,18 @@ def parse_args(ident: str):
 
     if args.ds == 'deepmind/code_contests':
         args.scorer = 'run_code'
-    if len(args.continue_run) > 0:
-        args.copy = args.continue_run
 
-    if len(args.copy) > 0:
-        m = args.model
-        with open(f"runs/{args.copy}/run_args.json", 'r') as f:
+    if len(args.continue_run) > 0:
+        args.copy_args = args.continue_run
+    
+    if len(args.copy_args) > 0:
+        m, cp, cr = args.model, args.copy_args, args.continue_run
+        with open(f"runs/{args.copy_args}/run_args.json", 'r') as f:
             args = utils.DotDict(json.load(f))
             if 'openai' not in args.keys():
                 args.openai = False
-            args.model = m
+            args.model, args.copy_args, args.continue_run = m, cp, cr
+        
 
     if args.log:
         if type(args) == utils.DotDict:
@@ -63,6 +68,7 @@ def parse_args(ident: str):
         else:
             args_dict = vars(args)
         args_dict["type"] = "args"
+        args_dict["ts"] = datetime.now().strftime('%H-%M-%S_%d-%m-%Y')
         with open(f"runs/{ident}/results.ndjson", 'w') as f:
             f.write(json.dumps(args_dict) + '\n')
         with open(f"runs/{ident}/run_args.json", 'w') as f:
@@ -104,7 +110,8 @@ def parse_args_and_init(ident: str, template: Optional[str]=None) -> tuple[str, 
         sentences_per_point_range=args.sentences_per_point_range,
         temp=args.temp,
         sol_temp=args.temp,
-        gen_pop_lamarck=args.gen_pop_lamarck 
+        gen_pop_lamarck=args.gen_pop_lamarck, 
+        run_eval=not args.no_eval
     )
     if args.debug:
         api = None

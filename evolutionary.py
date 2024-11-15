@@ -40,7 +40,8 @@ class EvoParams():
                  temp: float = 0.5,
                  sol_temp: float = 0.25,
                  gen_pop_lamarck: bool = False,
-                 continue_run: str = "")-> None:
+                 continue_run: str = "",
+                 run_eval: bool = True)-> None:
         self.initial_population_size = initial_population_size
         self.population_change_rate = population_change_rate
         self.mating_pool_size = mating_pool_size
@@ -74,6 +75,7 @@ class EvoParams():
         self.sol_temp = sol_temp
         self.gen_pop_lamarck = gen_pop_lamarck
         self.continue_run = continue_run
+        self.run_eval = run_eval
 
     def get_similarity_scoring_handle(self) -> Optional[Callable[[Prompt, Prompt], float]]:
         """
@@ -127,6 +129,16 @@ class EvolutionaryAlgorithm():
             print(f"Step {i} complete")
             self.step += 1
 
+    def lamarck_baseline(self, eval_data, count: Optional[int] = None) -> tuple[float, float]:
+        """
+        Represents the result if computation used for evolution was instead used to generate more initial prompts.
+        Returns the max and mean score.
+        """
+        c = count if count else self.params.initial_population_size * self.params.max_iters
+        prompts = [self.pop_function() for _ in range(c)]
+        scores = [p.calculate_fitness(eval_data) for p in prompts]
+        return (max(scores), sum(scores)/len(scores))
+    
     def populate(self) -> None:
         """
         Generate initial prompts based on task input/output samples.
@@ -143,6 +155,7 @@ class EvolutionaryAlgorithm():
                 lines = f.readlines()
                 if len(lines) == self.params.initial_population_size:
                     self.population = [Prompt(json.loads(l), self.params.prompt_params) for l in lines]
+                    self.step = i + 1
                     break
         raise ValueError("This run does not have the same population size.")
 
