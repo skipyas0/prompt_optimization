@@ -26,7 +26,8 @@ Only use 'True' or 'False' as your answer. Only terminate your answer with [[Tru
 'code': """Your answer must ONLY consist of valid and runnable python code. 
 Do NOT write any other text. To read from stdin, only use 'input()'. 
 If you want to include an explanation for your solution, write it in valid python comments.
-"""
+""",
+'text': ""
 }
 
 class Metaprompt:

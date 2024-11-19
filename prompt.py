@@ -96,8 +96,7 @@ class Prompt():
             })) 
             for task in batch]
         
-        ground_truths = batch if self.params.code else [task['answer'] for task in batch]
-        fitness_scores = [self.params.evaluation_handle(ground, gen) for ground, gen in zip(ground_truths, results)]
+        fitness_scores = [self.params.evaluation_handle(ground, gen) for ground, gen in zip(batch, results)]
         self.best_fitness, self.result = max(zip(fitness_scores, results)) # save result with best performance on 
         self.fitness = sum(fitness_scores) / len(fitness_scores)
         stats.append_to_current_step({"Fitness in training": self.fitness})

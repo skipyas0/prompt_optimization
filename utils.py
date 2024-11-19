@@ -51,6 +51,12 @@ def load_dataset_and_preprocess(ds_name: str) -> tuple[str, Dataset]:
         ds = ds.filter(lambda ex: ex['difficulty']  == 7 and '<image>' not in ex['description']) # filter easy samples 
         ds = ds.map(map_code_contests, remove_columns=ds.column_names)
         ans_type = 'code'
+    elif re.fullmatch('^livebench/language/[a-z]+(_[a-z]+)*$', ds_name):
+        subset = ds_name.split('/')[-1]
+        ds = load_dataset('livebench/language', split='test')
+        ds = ds.filter(lambda x: x["task"] == subset)
+        ds = ds.map(map_livebench_language, remove_columns=ds.column_names)
+        ans_type = 'text'
     else:
         raise KeyError(f"Unsupported dataset {ds_name}")
     return ans_type, ds
@@ -80,9 +86,7 @@ def join_dataset_to_str(dataset: Dataset, insertion_token: str, insertion_positi
     for i, sample in enumerate(dataset.shuffle()):
         ex = ""
         ex += f"<{i}>\n"
-        ex += insertion_token if insertion_position == "prefix" else "Follow these steps and solve the problem in a logical fashion.\n 1. Analyze the problem.\n 2. Create a plan to solve it.\n 3. Follow the plan and explain your steps.\n 4. Give your final answer.\n"
-        ex += f"<{q}> {sample[q]} </{q}>\n"
-        ex += insertion_token if insertion_position == "suffix" else "Let's think step by step.\n"
+        ex += f"{insertion_token}<{q}> {sample[q]} </{q}>\n" if insertion_position == "prefix" else f"<{q}> {sample[q]} </{q}>\n{insertion_token}"
         ex += f"<{a}> {sample[a]} </{a}>\n"
         ex += f"</{i}>\n"
         res.append(ex)
@@ -142,20 +146,21 @@ def create_api_handles(api: Optional[OpenAIPredictor], log_file: str, scorer: st
         import fitness_functions as ff
         usage_helper = lambda prompt, temp: api.predict(question=prompt, temp=temp)
         if scorer == "ask_llm_to_compare":
-            score_helper = lambda ground, x: ff.ask_llm_to_compare(ground, x, usage_handle)
+            score_helper = lambda ground, x: ff.ask_llm_to_compare(ground['asnwer'], x, usage_handle)
         elif scorer == "binary_match":
-            score_helper = lambda ground, x: ff.binary_match(ground, x)
+            score_helper = lambda ground, x: ff.binary_match(ground['answer'], x)
         elif scorer == "run_code":
             score_helper = lambda task, x: ff.run_code(task, x)
-        elif scorer == "levenshtein":
-            from Levenshtein import ratio            
-            score_helper = ratio
         elif scorer == "rouge":
             from rouge_score import rouge_scorer
             scorer = rouge_scorer.RougeScorer(['rougeL'], use_stemmer=True)
-            score_helper = lambda a,b: scorer.score(a,b)["rougeL"].fmeasure 
+            score_helper = lambda a,b: scorer.score(a['answer'],b)["rougeL"].fmeasure
+        elif scorer == "rouge-diff":
+            from rouge_score import rouge_scorer
+            scorer = rouge_scorer.RougeScorer(['rougeL'], use_stemmer=True)
+            score_helper = lambda a, b: (3-2*scorer.score(b,a['output'])["rougeL"].fmeasure/scorer.score(a['input'],b)["rougeL"].fmeasure)**3  
         elif scorer == "bert":
-            score_helper = bert.bert_cosine_similarity
+            score_helper = lambda a, b: bert.bert_cosine_similarity(a['answer'], b)
 
     def usage_handle(input: str, temp: float) -> str:
         out = usage_helper(input, temp)
@@ -231,6 +236,13 @@ def map_code_contests(example):
         'test_outputs': test_outputs,
     }
 
+def map_livebench_language(example):
+    question = example["turns"][0].split('\n')[-1]
+    answer = example["ground_truth"]
+    return {
+        'input': question,
+        'output': answer
+    }
 
 class DotDict(dict):
     """A dictionary that supports dot notation access."""
