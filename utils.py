@@ -24,12 +24,12 @@ def load_dataset_and_preprocess(ds_name: str) -> tuple[str, Dataset]:
     """
     if ds_name == 'openai/gsm8k':
         ds = load_dataset(ds_name, 'main', split='train')
-        ds = ds.map(map_gsm8k, remove_columns=ds.column_names)
+        ds = ds.map(map_gsm8k, remove_columns=ds.column_names, load_from_cache_file=False)
         ans_type = 'numeric'
     elif re.fullmatch('^maveriq/bigbenchhard/[a-z]+(_[a-z]+)*$', ds_name):
         subset = ds_name.split('/')[-1]
         ds = load_dataset('maveriq/bigbenchhard', subset, split='train')
-        ds = ds.map(map_bigbenchhard)
+        ds = ds.map(map_bigbenchhard, load_from_cache_file=False)
         if subset in ['causal_judgement', 'navigate', 'web_of_lies', 'sports_understanding']:
             ans_type = 'yes-no'
         elif subset in ['snarks', 'disambiguation_qa', 'geometric_shapes', 'hyperbaton', 'movie_recommendation', 'penguins_in_a_table']:
@@ -38,24 +38,24 @@ def load_dataset_and_preprocess(ds_name: str) -> tuple[str, Dataset]:
             raise KeyError(f"Unsupported bigbenchhard subset {subset}")
     elif ds_name == 'GBaker/MedQA-USMLE-4-options':
         ds = load_dataset(ds_name, 'default', split='train')
-        ds = ds.map(map_medqa_usmle, remove_columns=ds.column_names)
+        ds = ds.map(map_medqa_usmle, remove_columns=ds.column_names, load_from_cache_file=False)
         ans_type = 'choice'
     elif re.fullmatch('^cais/mmlu/[a-z]+(_[a-z]+)*$', ds_name):
         subset = ds_name.split('/')[-1]
         ds = load_dataset('cais/mmlu', subset, split='test')
         ds = ds.cast_column('answer', Value('string'))
-        ds = ds.map(map_mmlu, remove_columns=ds.column_names)
+        ds = ds.map(map_mmlu, remove_columns=ds.column_names, load_from_cache_file=False)
         ans_type = 'choice'
     elif ds_name == 'deepmind/code_contests':
         ds = load_dataset(ds_name, split='train')
         ds = ds.filter(lambda ex: ex['difficulty']  == 7 and '<image>' not in ex['description']) # filter easy samples 
-        ds = ds.map(map_code_contests, remove_columns=ds.column_names)
+        ds = ds.map(map_code_contests, remove_columns=ds.column_names, load_from_cache_file=False)
         ans_type = 'code'
     elif re.fullmatch('^livebench/language/[a-z]+(_[a-z]+)*$', ds_name):
         subset = ds_name.split('/')[-1]
         ds = load_dataset('livebench/language', split='test')
         ds = ds.filter(lambda x: x["task"] == subset)
-        ds = ds.map(map_livebench_language, remove_columns=ds.column_names)
+        ds = ds.map(map_livebench_language, remove_columns=ds.column_names, load_from_cache_file=False)
         ans_type = 'text'
     else:
         raise KeyError(f"Unsupported dataset {ds_name}")
@@ -158,7 +158,7 @@ def create_api_handles(api: Optional[OpenAIPredictor], log_file: str, scorer: st
         elif scorer == "rouge-diff":
             from rouge_score import rouge_scorer
             scorer = rouge_scorer.RougeScorer(['rougeL'], use_stemmer=True)
-            score_helper = lambda a, b: (3-2*scorer.score(b,a['output'])["rougeL"].fmeasure/scorer.score(a['input'],b)["rougeL"].fmeasure)**3  
+            score_helper = lambda a, b: (3-2*scorer.score(b,a['answer'])["rougeL"].fmeasure/scorer.score(a['question'],b)["rougeL"].fmeasure)**3  
         elif scorer == "bert":
             score_helper = lambda a, b: bert.bert_cosine_similarity(a['answer'], b)
 
@@ -240,8 +240,8 @@ def map_livebench_language(example):
     question = example["turns"][0].split('\n')[-1]
     answer = example["ground_truth"]
     return {
-        'input': question,
-        'output': answer
+        'question': question,
+        'answer': answer
     }
 
 class DotDict(dict):
