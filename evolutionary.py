@@ -149,14 +149,19 @@ class EvolutionaryAlgorithm():
 
     def load_population(self, ident) -> None:
         steps_path = f"runs/{ident}/steps"
-        n_files = len(os.listdir(steps_path))
-        for i in range(n_files-1, -1, -1):
-            with open(steps_path+f"step{i}.ndjson", "r") as f:
+        files = list(sorted(os.listdir(steps_path), reverse=True))
+        if "stepbaseline.ndjson" in files:
+            files=files[1:]
+        for fn in files:
+            with open(steps_path+f"/{fn}", "r") as f:
                 lines = f.readlines()
                 if len(lines) == self.params.initial_population_size:
-                    self.population = [Prompt(json.loads(l), self.params.prompt_params) for l in lines]
-                    self.step = i + 1
-                    break
+                    for l in lines:
+                        p = Prompt(json.loads(l), self.params.prompt_params)
+                        p.bert_embedding = self.params.bert.get_bert_embedding(str(p))
+                        self.population.append(p)
+                    self.step = int(fn.replace("step","").replace(".ndjson","")) + 1
+                    return
         raise ValueError("This run does not have the same population size.")
 
     def repopulate(self) -> None:

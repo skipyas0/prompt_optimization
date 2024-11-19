@@ -111,6 +111,7 @@ def parse_args_and_init(ident: str, template: Optional[str]=None) -> tuple[str, 
         temp=args.temp,
         sol_temp=args.temp,
         gen_pop_lamarck=args.gen_pop_lamarck, 
+        continue_run=args.continue_run,
         run_eval=not args.no_eval
     )
     if args.debug:

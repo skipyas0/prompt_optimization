@@ -43,7 +43,7 @@ class Prompt():
     def __init__(self, traits: list[Trait] | dict, params: PromptParams) -> None: 
         if isinstance(traits, dict):   
             self.params = params
-            self.traits = traits['traits']
+            self.traits = [Trait(*trait_info) for trait_info in traits['traits']]
             self.n_traits = len(self.traits)
             self.fitness = traits['avg_fitness']
             self.best_fitness = traits['best_fitness']
