@@ -228,16 +228,16 @@ class EvolutionaryAlgorithm():
         """
         One step of Genetic Algorithm.
         """
-        self.population = self.selection()
+        self.mating_pool = self.selection()
         if just_eval:
             return
         
         # GA crossover procedure
         lotto = range(self.params.mating_pool_size)
         offsprings = []
-        while self.pop_size + len(offsprings) < self.target_pop_size:
+        while len(offsprings) < self.target_pop_size:
             i1, i2 = random.sample(lotto, 2)
-            s1, s2 = self.population[i1], self.population[i2]
+            s1, s2 = self.mating_pool[i1], self.mating_pool[i2]
 
             res = self.crossover(s1, s2)
 
@@ -249,7 +249,7 @@ class EvolutionaryAlgorithm():
             res.bert_embedding = self.params.bert.get_bert_embedding(str(res))
             offsprings.append(res)
 
-        self.population += offsprings
+        self.population = offsprings
 
         self.target_pop_size = max(self.params.mating_pool_size,
                             self.target_pop_size + self.params.population_change_rate)
