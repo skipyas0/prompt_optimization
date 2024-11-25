@@ -1,0 +1,10 @@
+{
+    "dataset": "openai/gsm8k",
+    "split_lengths": [
+        5, 200, 30
+    ],
+    "metaprompt_set": "base",
+    "ans_type": "numeric",
+    "formatting_suffix": "After your explanation give your answer as a numeric value in two pairs of square brackets.\n<example>\nEXPLANATION\n[[ANSWER]]\n</example>",
+    "scorer": "binary_match"
+}

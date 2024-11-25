@@ -3,7 +3,7 @@ from evolutionary import EvoParams
 import utils
 from datasets import Dataset
 from typing import Optional
-from vllm_api import OpenAIPredictor
+from model_api import OpenAIPredictor
 from local_api import LocalPredictor
 import json
 from datetime import datetime

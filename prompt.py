@@ -6,13 +6,6 @@ import json
 import metaprompt
 from stats import stats
 
-universal_suffix = """After your explanation, make sure you put your final answer in two pairs of square brackets. 
-<example>
-...
-And for the above reasons, the solution is ANSWER.
-[[ANSWER]]
-</example>"""
-
 
 class Trait:
     def __init__(self, text: str = "", position: Literal['prefix', 'suffix'] = 'prefix', evolved: bool = True) -> None:
@@ -31,13 +24,12 @@ class Trait:
         )
 
 class PromptParams():
-    def __init__(self, usage_handle: Callable[[str], str], evalutation_handle: Callable[[str, str], float], log_file: str, format_enforcement_suffix: str) -> None:
+    def __init__(self, usage_handle: Callable[[str], str], log_file: str, task_toolkit) -> None:
         self.usage_handle = usage_handle
-        self.evaluation_handle = evalutation_handle
+        self.evaluation_handle = task_toolkit.scoring_function
         self.log_file = log_file
-        self.metaprompt = metaprompt.solve
-        self.format_enforment_suffix = format_enforcement_suffix
-        self.code = self.format_enforment_suffix == metaprompt.formatting_enforcement_suffixes['code']
+        self.metaprompt = task_toolkit.metaprompt_set.solve
+        self.format_enforment_suffix = task_toolkit.formatting_suffix
         
 class Prompt():
     def __init__(self, traits: list[Trait] | dict, params: PromptParams) -> None: 
@@ -127,8 +119,6 @@ class Prompt():
             'best_fitness': self.best_fitness,
             'average_similarity': float(self.average_similarity),
             'maximum_similarity': float(self.maximum_similarity)
-            #'bert_embedding': self.bert_embedding
         }
         with open(self.params.log_file.format(step), 'a') as f:
             f.write(json.dumps(log_entry) + '\n')
-            #f.write(f"Prompt gen: {self.generation_number}\n\n***\n{str(self)}\n***\nTask with best result:\n{self.result[0]}\nResult:\n{self.result[1]}\n\nScore: {self.fitness}\n\n######")

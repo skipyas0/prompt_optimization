@@ -1,40 +1,17 @@
-from typing import Optional
-
-formatting_enforcement_suffixes = {
-    'numeric': """After your explanation give your answer as a numeric value in two pairs of square brackets.
-<example>
-EXPLANATION
-[[ANSWER]]
-</example>
-""",
-    'choice': """After your explanation choose the best option and give your answer in two pairs of square brackets.
-Answer only with the letter of the option.
-<example>
-TASK
-X: ANSWER1
-Y: ANSWER2
-EXPLANATION
-[[X]]
-</example>
-""",
-'yes-no': """After your explanation write your Yes/No answer into two pairs of square brackets.
-Only use 'Yes' or 'No' as your answer. Only terminate your answer with [[Yes]] or [[No]].
-""",
-'true-false': """After your explanation write your True/False answer into two pairs of square brackets.
-Only use 'True' or 'False' as your answer. Only terminate your answer with [[True]] or [[False]].
-""",
-'code': """Your answer must ONLY consist of valid and runnable python code. 
-Do NOT write any other text. To read from stdin, only use 'input()'. 
-If you want to include an explanation for your solution, write it in valid python comments.
-""",
-'text': ""
-}
+from typing import Optional, Literal
+from utils import FromJSON
 
 class Metaprompt:
-    def __init__(self, task: str, text: str, formatting_identifiers: list[str]) -> None:
-        self.text = text
+    def __init__(self, 
+                 task: str, 
+                 text: str, 
+                 type: Literal["trait", "solve", "evo"],
+                 format_ids: set[str]) -> None:
         self.task = task
-        self.formatting_identifiers = formatting_identifiers
+        self.text = text
+        self.type = type
+        self.formatting_identifiers = set(format_ids)
+        print(f"loaded prompt {self.type}/{self.task} with ins len {len(self.text)}")
 
     def __str__(self) -> str:
         return self.text
@@ -44,85 +21,40 @@ class Metaprompt:
             return str(self).format(**replace)
         raise KeyError(f"Formatting failed, keys given: {list(replace.keys())}, keys needed {self.formatting_identifiers}")
     
-instructions = Metaprompt(
-    task="instructions",
-    text="""{metapersona}Your mission is to generate instructions for a generic task given a few examples of input/output pairs.
-<examples>
-{examples}
-</examples>
-Substitute the <-INS-> tag with your generated instructions. 
-Pay attention to the tag's location in the example.
-Do NOT refer to the examples in your answer! Your generated instructions will be used to aid with different examples.
-Try to be as concise as possible.
-{length}{metastyle}Generated instructions:""",
-    formatting_identifiers={"metapersona", "examples", "length", "metastyle"}
-)
 
-mutated_crossover = Metaprompt(
-    task="mutated_crossover",
-    text="""Below you will find two sequences with similar meanings. 
-Your task is to take ideas from both sequences and paraphrase them, so that you add novelty.
-Avoid using the same words as in the original sequences.
+class MetapromptSet(FromJSON):
+    default_path = "conf/_meta/{}.json"
+    def __init__(self, settings: Optional[dict], **kwargs):
+        super().__setattr__('settings', settings)
+        super().__setattr__('metaprompts', {k: Metaprompt(task=k, **v) for k,v in kwargs["metaprompts"].items()})
 
-<sequence1>
-{sequence1}
-</sequence1>
+    
+    def keys(self):
+        return self.metaprompts.keys()
+    def items(self):
+        return self.metaprompts.items()
+    def as_dict(self):
+        return self.metaprompts
+    
+    def __getattr__(self, item):
+        if item == "settings":
+            return self.settings
+        if item == "metaprompts":
+            return self.metaprompts
+        if item in self.metaprompts:
+            return self.metaprompts[item]
+        raise AttributeError(f"MetapromptSet doesn't include metaprompt '{item}'.")
 
-<sequence2>
-{sequence2}
-</sequence2>
-{metastyle}Resulting Sequence:""",
-    formatting_identifiers={"sequence1", "sequence2", "metastyle"}
-)
+    def __setattr__(self, key, value):
+        if key == "settings":
+            # Use super().__setattr__ to set attributes directly
+            super().__setattr__('settings', value)
+        elif key == "metaprompt":
+            super().__setattr__('metaprompts', value)
+        else:
+            # Update metaprompts dictionary for dynamic attributes
+            self.metaprompts[key] = value
 
-mutation = Metaprompt(
-    task="mutation",
-    text="""Below you will find a sequence. 
-Your task is to mutate it - change it, for example by choosing fitting synonyms.
-Conserve the original meaning.
-
-<sequence>
-{sequence}
-</sequence>
-{metastyle}Resulting Sequence:""",
-    formatting_identifiers={"sequence", "metastyle"}
-)
-
-crossover = Metaprompt(
-    task="crossover",
-    text="""Below you will find two sequences. 
-Your task is to identify important aspects of both sequences and then combine them so that the resulting sequence captures the meaning of both sequence.
-
-<sequence1>
-{sequence1}
-</sequence1>
-
-<sequence2>
-{sequence2}
-</sequence2>
-{metastyle}Resulting Sequence:""",
-    formatting_identifiers={"sequence1", "sequence2", "metastyle"}
-)
-
-solve = Metaprompt(
-    task="solve",
-    text="""{preamble}{prefix_instructions}    
-    <task>
-    {task}
-    </task>
-    {suffix_instructions}{universal_suffix}
-    """,
-    formatting_identifiers={"preamble", "prefix_instructions", "task", "suffix_instructions", "universal_suffix"}
-)
-
-metaprompts = [
-    instructions,
-    mutated_crossover,
-    mutation,
-    crossover,
-    solve
-]
-
-metaprompts_dict = {
-    p.task: p for p in metaprompts
-}
+    @property
+    def traits(self): 
+        return filter(lambda x: x.type == "trait", self.metaprompts.values())

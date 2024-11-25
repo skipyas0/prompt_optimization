@@ -1,0 +1,10 @@
+{
+    "dataset": "livebench/language/typos",
+    "split_lengths": [
+        5, 70, 10
+    ],
+    "metaprompt_set": "base",
+    "ans_type": "text",
+    "formatting_suffix": "",
+    "scorer": "rouge_diff"
+}

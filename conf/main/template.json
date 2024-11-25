@@ -1,0 +1,9 @@
+{
+    "evo": "long",
+    "meta": "base",
+    "prompt": "single_prefix",
+    "task": "typos",
+    "generation": "fast_simple",
+    "debug": false,
+    "run_eval": true
+}

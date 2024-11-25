@@ -1,57 +1,32 @@
-from typing import Callable
-from utils import parse_verdict, parse_answer
-from random import random
-import re
-import io
+import utils
 import multiprocessing
-from contextlib import redirect_stdout
-def ask_llm_to_compare(ground: str, sample: str, gen_handle: Callable[[str], str]) -> float:
-    """
-    Ask llm to rate the similarity of the two solutions based on a 5-point scale.
-    """
+from rouge_score import rouge_scorer
 
-    rating_scale = ["unrelated", "somewhat related", "similar", "very similar", "equivalent"]
-    rs_with_formatting = [f"[[[{i}]]]" for i in rating_scale]
-    flip = random() < 0.5 # prevent text order bias
 
-    prompt = f"""
-        You are a skilled text evaluator capable of comparing any two texts and rate their semantic similarity.
-        Compare these two texts along with whatever conclusions they come to. 
+def logging_wrapper(func, test_sample, answer) -> float:
+    out = func(test_sample, answer)
+    utils.log_usage(log_file, (test_sample["answer"], answer), out)
+    return out
 
-        <text1>
-        {ground if flip else sample}
-        </text1>
-        <text2>
-        {sample if flip else ground}
-        </text2>
 
-        Follow your explanations with your final verdict. Choose one option from the following: {rs_with_formatting}. Do not forget the three square brackets.
-    """
+def rouge_simple(test_sample, answer) -> float:
+    scorer = rouge_scorer.RougeScorer(['rougeL'], use_stemmer=True)
+    return scorer.score(test_sample['answer'], answer)["rougeL"].fmeasure
 
-    ans = gen_handle(prompt)
-    verdict = parse_verdict(ans)
-    if len(verdict) != 1 or verdict[0] not in rating_scale:
-        print(f"WARNING: LLM Evaluator answer {ans} not part of the scale.")
-        return 0.0
-    
-    return 0.25*rating_scale.index(verdict[0])
+def rouge_diff(test_sample, answer) -> float:
+    scorer = rouge_scorer.RougeScorer(['rougeL'], use_stemmer=True)
+    baseline = scorer.score(test_sample['question'], test_sample['answer'])["rougeL"].fmeasure
+    ans_score = scorer.score(answer, test_sample['answer'])["rougeL"].fmeasure
+    return 3-2*(baseline/ans_score)**3  
 
-def binary_match(ground: str, sample: str) -> float:
-    results = parse_answer(sample)
+
+def binary_match(test_sample, answer) -> float:
+    ground = test_sample['answer']
+    results = utils.parse_answer(answer)
     for r in results:
         if r.strip() == ground.strip():
             return 1.0
     return 0.0
-
-
-def my_exec(input_data, code, queue):
-    f = io.StringIO()
-    inp = iter(input_data)
-    local_vars = {"input": lambda: next(inp)}
-    with redirect_stdout(f):
-        exec(code, {}, local_vars)
-    # Send the captured output back to the main process
-    queue.put(f.getvalue().strip())
 
 def run_code(test_cases: dict[str, list[str]], tested_code: str) -> float:
     test_input = test_cases['test_inputs']
@@ -67,7 +42,7 @@ def run_code(test_cases: dict[str, list[str]], tested_code: str) -> float:
         queue = multiprocessing.Queue()  # Queue to capture output
         try:
             # Set up a separate process for code execution
-            p = multiprocessing.Process(target=my_exec, args=(test_input[i], tested_code, queue))
+            p = multiprocessing.Process(target=utils.my_exec, args=(test_input[i], tested_code, queue))
             p.start()
             p.join(3)  # Wait for 3 seconds
 
@@ -93,3 +68,10 @@ def run_code(test_cases: dict[str, list[str]], tested_code: str) -> float:
     if all([x == 1.0 for x in res]):
         return 1.0
     return 0.75 * sum(res) / len(res)
+
+ff_dict = {
+    "rouge_simple": rouge_simple,
+    "rouge_diff": rouge_diff,
+    "binary_match": binary_match,
+    "run_code": run_code
+}

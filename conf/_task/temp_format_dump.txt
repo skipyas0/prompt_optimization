@@ -1,0 +1,30 @@
+
+formatting_enforcement_suffixes = {
+    'numeric': """After your explanation give your answer as a numeric value in two pairs of square brackets.
+<example>
+EXPLANATION
+[[ANSWER]]
+</example>
+""",
+    'choice': """After your explanation choose the best option and give your answer in two pairs of square brackets.
+Answer only with the letter of the option.
+<example>
+TASK
+X: ANSWER1
+Y: ANSWER2
+EXPLANATION
+[[X]]
+</example>
+""",
+'yes-no': """After your explanation write your Yes/No answer into two pairs of square brackets.
+Only use 'Yes' or 'No' as your answer. Only terminate your answer with [[Yes]] or [[No]].
+""",
+'true-false': """After your explanation write your True/False answer into two pairs of square brackets.
+Only use 'True' or 'False' as your answer. Only terminate your answer with [[True]] or [[False]].
+""",
+'code': """Your answer must ONLY consist of valid and runnable python code. 
+Do NOT write any other text. To read from stdin, only use 'input()'. 
+If you want to include an explanation for your solution, write it in valid python comments.
+""",
+'text': ""
+}

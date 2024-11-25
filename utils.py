@@ -1,13 +1,19 @@
-from datasets import load_dataset, Dataset, Value
+from datasets import Dataset
 import re
 import json
-from vllm_api import OpenAIPredictor
-from typing import Callable, Literal, Optional
+from typing import Literal, Type, TypeVar
 import random 
-from bert import bert
-from metaprompt import formatting_enforcement_suffixes
 import shutil
 import os
+import io
+from contextlib import redirect_stdout
+
+def scramble(input: str, *_, **__) -> str:
+    return input
+    #char_list = list(input)
+    #random.shuffle(char_list)
+    #return ''.join(char_list)
+
 def load_log_dict(path: str) -> list[dict]:
     """
     Open .ndjson and load it as list of dicts
@@ -18,62 +24,16 @@ def load_log_dict(path: str) -> list[dict]:
             data.append(json.loads(line))  # Convert each line to a dictionary
     return data
 
-def load_dataset_and_preprocess(ds_name: str) -> tuple[str, Dataset]:
-    """
-    Downloads one of the supported datasets and preprocesses it.
-    """
-    if ds_name == 'openai/gsm8k':
-        ds = load_dataset(ds_name, 'main', split='train')
-        ds = ds.map(map_gsm8k, remove_columns=ds.column_names, load_from_cache_file=False)
-        ans_type = 'numeric'
-    elif re.fullmatch('^maveriq/bigbenchhard/[a-z]+(_[a-z]+)*$', ds_name):
-        subset = ds_name.split('/')[-1]
-        ds = load_dataset('maveriq/bigbenchhard', subset, split='train')
-        ds = ds.map(map_bigbenchhard, load_from_cache_file=False)
-        if subset in ['causal_judgement', 'navigate', 'web_of_lies', 'sports_understanding']:
-            ans_type = 'yes-no'
-        elif subset in ['snarks', 'disambiguation_qa', 'geometric_shapes', 'hyperbaton', 'movie_recommendation', 'penguins_in_a_table']:
-            ans_type = 'choice'
-        else:
-            raise KeyError(f"Unsupported bigbenchhard subset {subset}")
-    elif ds_name == 'GBaker/MedQA-USMLE-4-options':
-        ds = load_dataset(ds_name, 'default', split='train')
-        ds = ds.map(map_medqa_usmle, remove_columns=ds.column_names, load_from_cache_file=False)
-        ans_type = 'choice'
-    elif re.fullmatch('^cais/mmlu/[a-z]+(_[a-z]+)*$', ds_name):
-        subset = ds_name.split('/')[-1]
-        ds = load_dataset('cais/mmlu', subset, split='test')
-        ds = ds.cast_column('answer', Value('string'))
-        ds = ds.map(map_mmlu, remove_columns=ds.column_names, load_from_cache_file=False)
-        ans_type = 'choice'
-    elif ds_name == 'deepmind/code_contests':
-        ds = load_dataset(ds_name, split='train')
-        ds = ds.filter(lambda ex: ex['difficulty']  == 7 and '<image>' not in ex['description']) # filter easy samples 
-        ds = ds.map(map_code_contests, remove_columns=ds.column_names, load_from_cache_file=False)
-        ans_type = 'code'
-    elif re.fullmatch('^livebench/language/[a-z]+(_[a-z]+)*$', ds_name):
-        subset = ds_name.split('/')[-1]
-        ds = load_dataset('livebench/language', split='test')
-        ds = ds.filter(lambda x: x["task"] == subset)
-        ds = ds.map(map_livebench_language, remove_columns=ds.column_names, load_from_cache_file=False)
-        ans_type = 'text'
-    else:
-        raise KeyError(f"Unsupported dataset {ds_name}")
-    return ans_type, ds
+def my_exec(input_data, code, queue):
+    f = io.StringIO()
+    inp = iter(input_data)
+    local_vars = {"input": lambda: next(inp)}
+    with redirect_stdout(f):
+        exec(code, {}, local_vars)
+    # Send the captured output back to the main process
+    queue.put(f.getvalue().strip())
 
-def load_splits(ds_name: str, split: tuple[int, int, int]) -> tuple[str, Dataset, Dataset, Dataset]:
-    """
-    Load dataset and split it according to sample numbers in input tuple.
-    """
-    ans_type, ds = load_dataset_and_preprocess(ds_name)
-    suff = formatting_enforcement_suffixes[ans_type]
-    ds = ds.shuffle(seed=42).select(range(sum(split)))
-    infer = ds.select(range(split[0]))
-    train = ds.select(range(split[0], sum(split[:2])))
-    test = ds.select(range(sum(split[:2]), sum(split)))
-    return suff, infer, train, test
-
-def join_dataset_to_str(dataset: Dataset, insertion_token: str, insertion_position: Literal["prefix", "suffix"] = "prefix") -> list[str]:   
+def join_dataset_to_str(dataset: Dataset, insertion_token: str = "<-INS->\n", insertion_position: Literal["prefix", "suffix"] = "prefix") -> list[str]:   
     """
     Modify samples with <in> <out> html-like tags
     """
@@ -92,16 +52,6 @@ def join_dataset_to_str(dataset: Dataset, insertion_token: str, insertion_positi
         res.append(ex)
     return res
 
-def parse_verdict(text: str) -> str:
-    """
-    Parse [[[verdict]]]
-    """
-    pattern = r'\[\[\[([a-z]+ ?[a-z]*)\]\]\]'# <- only lowercase letters 
-    #any char - r'\[\[\[(.*?)\]\]\]'
-    matches = re.findall(pattern, text)
-
-    return matches
-
 def parse_answer(text: str) -> str:
     """
     Parse [[answer]]
@@ -111,69 +61,6 @@ def parse_answer(text: str) -> str:
     matches = re.findall(pattern, text)
 
     return matches
-
-def log_usage(log_file: str, input: str | tuple[str, str], output: str | float) -> None:
-    """
-    Add entry about handle usage to log file.
-    """
-    if type(output) == str:
-        log_entry = {
-            'type': "usage",
-            'in': input,
-            'out': output,
-        }
-    else:
-        log_entry = {
-            'type': "score",
-            'ground': f"[[{input[0]}]]",
-            'in': input[1],
-            'out': output,
-        }
-
-    with open(log_file, 'a') as f:
-        f.write(json.dumps(log_entry) + '\n')
-
-def create_api_handles(api: Optional[OpenAIPredictor], log_file: str, scorer: str) -> tuple[Callable[[str, float], str], Callable[[str | dict[str, list[str],str]], float]]:
-    if api is None:
-        #fast debug to replace LLM calls 
-        def scramble(input: str, _: float) -> str:
-            char_list = list(input)
-            random.shuffle(char_list)
-            return ''.join(char_list)
-        usage_helper = scramble
-        score_helper = lambda _0, _1: random.random()
-    else:
-        import fitness_functions as ff
-        usage_helper = lambda prompt, temp: api.predict(question=prompt, temp=temp)
-        if scorer == "ask_llm_to_compare":
-            score_helper = lambda ground, x: ff.ask_llm_to_compare(ground['asnwer'], x, usage_handle)
-        elif scorer == "binary_match":
-            score_helper = lambda ground, x: ff.binary_match(ground['answer'], x)
-        elif scorer == "run_code":
-            score_helper = lambda task, x: ff.run_code(task, x)
-        elif scorer == "rouge":
-            from rouge_score import rouge_scorer
-            scorer = rouge_scorer.RougeScorer(['rougeL'], use_stemmer=True)
-            score_helper = lambda a,b: scorer.score(a['answer'],b)["rougeL"].fmeasure
-        elif scorer == "rouge-diff":
-            from rouge_score import rouge_scorer
-            scorer = rouge_scorer.RougeScorer(['rougeL'], use_stemmer=True)
-            score_helper = lambda a, b: (3-2*scorer.score(b,a['answer'])["rougeL"].fmeasure/scorer.score(a['question'],b)["rougeL"].fmeasure)**3  
-        elif scorer == "bert":
-            score_helper = lambda a, b: bert.bert_cosine_similarity(a['answer'], b)
-
-    def usage_handle(input: str, temp: float) -> str:
-        out = usage_helper(input, temp)
-        log_usage(log_file, input, out)
-        return out
-    
-    def score_handle(ground: str | dict[str, list[str]], input: str) -> float:
-        out = score_helper(ground, input)
-        log_usage(log_file, (ground, input), out)
-        return out
-    
-    return usage_handle, score_handle
-
 
 def find_key_by_value(d, x):
     for key, value in d.items():
@@ -194,55 +81,6 @@ def copy_contents(source_folder, dest_folder):
         else:
             shutil.copy2(source_path, destination_path)
 
-def map_medqa_usmle(example):
-    options_text = "\n".join(f'{k}: {v}' for k,v in example['options'].items()) 
-    example['question'] = example['question'] + "\nOptions:\n" + options_text
-    example['answer'] = find_key_by_value(example['options'], example['answer'])
-    return {'question': example['question'], 'answer': example['answer']}  # Only keep these two fields
-
-def map_bigbenchhard(example):
-    if type(example['target']) == list:
-        example['target'] = example['target'][0]
-    if type(example['input']) == list:    
-        example['input'] = example['input'][0]
-
-    if re.fullmatch('^[(][A-Z][)]$',example['target']):
-        example['target'] = example['target'][1]
-    elif example['target'] == 'no':
-        example['target'] = 'No'
-    elif example['target'] == 'yes':
-        example['target'] = 'Yes'
-    return {'question': example['input'], 'answer': example['target']}  
-
-def map_mmlu(example):
-    example['question'] = example['question'] + '\n' + '\n'.join([f'{op}: {op_text}' for op, op_text in zip("ABCD", example['choices'])])
-    example['answer'] = "ABCD"[int(example['answer'])]
-    return {'question': example['question'], 'answer': example['answer']}
-
-def map_gsm8k(example):
-    example['question'] = example['question']
-    example['answer'] = example['answer'].split('####')[1].replace('\xa0', '').strip()
-    return {'question': example['question'], 'answer': example['answer']}
-
-
-def map_code_contests(example):
-    question = example['description']
-    test_inputs = [x.strip().split('\n') for x in example['private_tests']['input']]
-    test_outputs = [x.strip() for x in example['private_tests']['output']]
-    
-    return {
-        'question': question,
-        'test_inputs': test_inputs,
-        'test_outputs': test_outputs,
-    }
-
-def map_livebench_language(example):
-    question = example["turns"][0].split('\n')[-1]
-    answer = example["ground_truth"]
-    return {
-        'question': question,
-        'answer': answer
-    }
 
 class DotDict(dict):
     """A dictionary that supports dot notation access."""
@@ -258,3 +96,61 @@ class DotDict(dict):
         d = dict()
         d.update(self)
         return d
+    
+class LoggingWrapper:
+    def __init__(self, ident) -> None:
+        self.ident = ident
+        self.log_file = "runs/ident/results/{}.ndjson"
+
+    def __call__(self, input, output, log_type) -> None:
+        """
+        Add entry about handle usage to log file.
+        """
+
+        if log_type == "usage":
+            log_entry = {
+                'type': "usage",
+                'in': input,
+                'out': output,
+            }
+        else:
+            log_entry = {
+                'type': "score",
+                'ground': input[0],
+                'in': input[1],
+                'out': output,
+            }
+    
+        with open(self.log_file, 'a') as f:
+            f.write(json.dumps(log_entry) + '\n')
+
+
+T = TypeVar('T', bound='FromJSON')
+class FromJSON:
+    default_path: str = "./{}.json"
+    def to_json(self, template: str) -> None:
+        """Save the current instance attributes to a JSON file."""
+        filepath = self.default_path.format(template)
+        with open(filepath, 'w') as file:
+            json.dump(self.__dict__, file, indent=4)
+
+    @classmethod
+    def from_json(cls: Type[T], template: str) -> T:
+        """Load configuration from a JSON file and return an instance of the class."""
+        filepath = cls.default_path.format(template)
+        with open(filepath, 'r') as file:
+            config = json.load(file)
+        return cls(name=template, **config)
+    
+class MyCollectionIterator:
+    def __init__(self, items):
+        self.items = items
+        self.index = 0
+
+    def __next__(self):
+        if self.index < len(self.items):
+            item = self.items[self.index]
+            self.index += 1
+            return item
+        else:
+            raise StopIteration

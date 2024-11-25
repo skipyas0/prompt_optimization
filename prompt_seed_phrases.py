@@ -256,12 +256,12 @@ cot_prompts = [
 ]
 
 def random_length(points_range: tuple[int, int], sentences_per_point_range: tuple[int, int]) -> str:
-    a, b = points_range
-    points = random.randint(a,b)
-    c, d = sentences_per_point_range 
-    sentence_per_point = random.randint(c,d)
-    sentence_instruction = f"up to {sentence_per_point} sentences" if sentence_per_point > 1 else "1 sentence"
-    if points == 1:
-        return f"Respond with {sentence_instruction}.\n"
-    else:
-        return f"Keep your response to {points} most important points with {sentence_instruction} for each point.\n"
+        a, b = points_range
+        points = random.randint(a,b)
+        c, d = sentences_per_point_range 
+        sentence_per_point = random.randint(c,d)
+        sentence_instruction = f"up to {sentence_per_point} sentences" if sentence_per_point > 1 else "1 sentence"
+        if points == 1:
+            return f"Respond with {sentence_instruction}.\n"
+        else:
+            return f"Keep your response to {points} most important points with {sentence_instruction} for each point.\n"
