@@ -7,12 +7,13 @@ import shutil
 import os
 import io
 from contextlib import redirect_stdout
+import numpy as np
+from collections import namedtuple
 
 def scramble(input: str, *_, **__) -> str:
-    return input
-    #char_list = list(input)
-    #random.shuffle(char_list)
-    #return ''.join(char_list)
+    char_list = list(input)
+    random.shuffle(char_list)
+    return ''.join(char_list)
 
 def load_log_dict(path: str) -> list[dict]:
     """
@@ -81,6 +82,13 @@ def copy_contents(source_folder, dest_folder):
         else:
             shutil.copy2(source_path, destination_path)
 
+stats = namedtuple("Stats", ["mean", "median", "min", "max"])
+def seq_stats(data: list[float]):
+    mean = np.mean(data)
+    median = np.median(data)
+    min_val = np.min(data)
+    max_val = np.max(data)
+    return stats(mean, median, min_val, max_val)
 
 class DotDict(dict):
     """A dictionary that supports dot notation access."""
@@ -97,17 +105,12 @@ class DotDict(dict):
         d.update(self)
         return d
     
-class LoggingWrapper:
-    def __init__(self, ident) -> None:
-        self.ident = ident
-        self.log_file = "runs/ident/results/{}.ndjson"
-
-    def __call__(self, input, output, log_type) -> None:
-        """
-        Add entry about handle usage to log file.
-        """
-
-        if log_type == "usage":
+def log_usage(log_file: str, input: str | tuple[str, str], output: str | float) -> None:
+    """
+    Add entry about handle usage to log file.
+    """
+    if log_file:
+        if type(output) == str:
             log_entry = {
                 'type': "usage",
                 'in': input,
@@ -116,21 +119,22 @@ class LoggingWrapper:
         else:
             log_entry = {
                 'type': "score",
-                'ground': input[0],
+                'ground': f"[[{input[0]}]]",
                 'in': input[1],
                 'out': output,
             }
     
-        with open(self.log_file, 'a') as f:
+        with open(log_file, 'a') as f:
             f.write(json.dumps(log_entry) + '\n')
-
+    else:
+        print("WARNING: log_usage has non_existent file path")
 
 T = TypeVar('T', bound='FromJSON')
 class FromJSON:
     default_path: str = "./{}.json"
-    def to_json(self, template: str) -> None:
+    def to_json(self, target: str) -> None:
         """Save the current instance attributes to a JSON file."""
-        filepath = self.default_path.format(template)
+        filepath = self.default_path.format(target)
         with open(filepath, 'w') as file:
             json.dump(self.__dict__, file, indent=4)
 
@@ -142,15 +146,3 @@ class FromJSON:
             config = json.load(file)
         return cls(name=template, **config)
     
-class MyCollectionIterator:
-    def __init__(self, items):
-        self.items = items
-        self.index = 0
-
-    def __next__(self):
-        if self.index < len(self.items):
-            item = self.items[self.index]
-            self.index += 1
-            return item
-        else:
-            raise StopIteration

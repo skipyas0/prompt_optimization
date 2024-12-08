@@ -1,0 +1,8 @@
+{
+    "initial_population_size": 3,
+    "mating_pool_size": 2,
+    "max_iters": 6,
+    "selection_mode": "rank",
+    "similarity_th": 0.95,
+    "train_batch_size": 1
+}

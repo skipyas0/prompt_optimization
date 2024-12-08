@@ -52,3 +52,23 @@ class Stats(dict):
             dump(self, f, indent=4)
     
 stats = Stats()
+
+""" TODO
+def plot_training_stats(ident: str) -> None:
+    color_cycle = itertools.cycle(plt.cm.get_cmap('tab10').colors)
+
+    for name, values in stats.get_averages().items():
+        if type(values) != list:
+            continue
+        plt.figure()
+        color = next(color_cycle)
+        generations = range(1, len(values) + 1) 
+        plt.plot(generations, values, label=name, color=color)
+
+        plt.ylabel(f'{name}')
+        plt.xlabel('Step')
+        plt.title(f'Progress of {name.lower()} in training')
+        
+        plt.legend()
+        plt.savefig(f'runs/{ident}/plots/{name.lower().replace(" ", "_")}.svg', format='svg')
+"""

@@ -64,7 +64,7 @@ def create_splits(dataset: Dataset, split: tuple[int, int, int]) -> tuple[Datase
     train = ds.select(range(a, a+b))
     test = ds.select(range(a+b, total))
     splits = namedtuple("Splits", ["infer", "train", "test"])
-    return splits(infer, test, train)
+    return splits(infer, train, test)
 
 
 #### | ################################## | ####

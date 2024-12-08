@@ -42,6 +42,7 @@ class EvolutionaryAlgorithm():
     def __init__(self, config) -> None:
         self.config = config
         self.population: list[Prompt] = []
+        self.random_baseline: list[Prompt] = []
         self.population_through_steps: list[list[Prompt]] = []
         self.params = config.evoparams
         self.target_pop_size = self.params.initial_population_size
@@ -79,11 +80,16 @@ class EvolutionaryAlgorithm():
     def populate(self) -> None:
         """
         Generate initial prompts based on task input/output samples.
+        Creates many random examples to create a strong baseline for evaluation of the evolution progress.
         """
-        for _ in range(self.params.initial_population_size):
+        for _ in range(self.params.initial_population_size * (self.params.max_iters+1)):
             new = self.create_prompt_lamarck()
-            self.population.append(new)
-
+            self.random_baseline.append(new)
+        self.population = self.random_baseline[-self.params.initial_population_size:]
+        self.random_baseline = self.random_baseline[:-self.params.initial_population_size]
+        for p in self.random_baseline:
+            p.log("baseline")
+            
     def load_population(self, ident) -> None:
         steps_path = f"runs/{ident}/steps"
         files = list(sorted(os.listdir(steps_path), reverse=True))
@@ -172,11 +178,10 @@ class EvolutionaryAlgorithm():
 
             res = self.crossover(s1, s2)
 
-            """ TODO
-            if not self.params.combine_co_mut:
+            if "mutate" in self.metaprompts.keys():
                 # Crossover and mutation happen separately
                 self.mutate(res)
-            """
+
             res.bert_embedding = bert.get_bert_embedding(str(res))
             offsprings.append(res)
 

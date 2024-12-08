@@ -104,7 +104,7 @@ class Prompt():
         return new
     
         
-    def log(self, step: int, p_type: str="prompt") -> None:
+    def log(self, step: int | str, p_type: str="steps") -> None:
         """
         Add entry about self to .ndjson defined in PromptParams.
         """
@@ -120,5 +120,6 @@ class Prompt():
             'average_similarity': float(self.average_similarity),
             'maximum_similarity': float(self.maximum_similarity)
         }
-        with open(self.params.log_file.format(step), 'a') as f:
+        step_id = step if type(step) == str else f"step{step}"
+        with open(self.params.log_file.format(context=p_type, step_id=step_id), 'a') as f:
             f.write(json.dumps(log_entry) + '\n')

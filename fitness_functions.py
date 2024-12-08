@@ -1,11 +1,11 @@
 import utils
 import multiprocessing
 from rouge_score import rouge_scorer
-
+import os
 
 def logging_wrapper(func, test_sample, answer) -> float:
     out = func(test_sample, answer)
-    utils.log_usage(log_file, (test_sample["answer"], answer), out)
+    utils.log_usage(os.getenv("CALL_LOG_FILE"), (test_sample["answer"], answer), out)
     return out
 
 
@@ -69,9 +69,10 @@ def run_code(test_cases: dict[str, list[str]], tested_code: str) -> float:
         return 1.0
     return 0.75 * sum(res) / len(res)
 
-ff_dict = {
+ff_dict_no_log = {
     "rouge_simple": rouge_simple,
     "rouge_diff": rouge_diff,
     "binary_match": binary_match,
     "run_code": run_code
 }
+ff_dict = {k: lambda a,b: logging_wrapper(v, a, b) for k, v in ff_dict_no_log.items()}
