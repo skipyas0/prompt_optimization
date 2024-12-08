@@ -73,7 +73,6 @@ def create_splits(dataset: Dataset, split: tuple[int, int, int]) -> tuple[Datase
 
 def load_bigbenchhard(subset):
     ds = load_dataset('maveriq/bigbenchhard', subset, split='train')
-    ds = ds.map(map_bigbenchhard, load_from_cache_file=False)
     if subset in ['causal_judgement', 'navigate', 'web_of_lies', 'sports_understanding']:
         ans_type = 'yes-no'
     elif subset in ['snarks', 'disambiguation_qa', 'geometric_shapes', 'hyperbaton', 'movie_recommendation', 'penguins_in_a_table']:
@@ -93,34 +92,34 @@ def load_bigbenchhard(subset):
         elif example['target'] == 'yes':
             example['target'] = 'Yes'
         return {'question': example['input'], 'answer': example['target']} 
+    ds = ds.map(map_bigbenchhard, load_from_cache_file=False)
     return ds, ans_type
 
 def load_mmlu(subset):
     ds = load_dataset('cais/mmlu', subset, split='test')
     ds = ds.cast_column('answer', Value('string'))
-    ds = ds.map(map_mmlu, remove_columns=ds.column_names, load_from_cache_file=False)
     ans_type = 'choice'
     def map_mmlu(example):
         example['question'] = example['question'] + '\n' + '\n'.join([f'{op}: {op_text}' for op, op_text in zip("ABCD", example['choices'])])
         example['answer'] = "ABCD"[int(example['answer'])]
         return {'question': example['question'], 'answer': example['answer']}
+    ds = ds.map(map_mmlu, remove_columns=ds.column_names, load_from_cache_file=False)
     return ds, ans_type
 
 def load_gsm8k():
     ds = load_dataset('openai/gsm8k', 'main', split='train')
-    ds = ds.map(map_gsm8k, remove_columns=ds.column_names, load_from_cache_file=False)
     ans_type = 'numeric'
 
     def map_gsm8k(example):
         example['question'] = example['question']
         example['answer'] = example['answer'].split('####')[1].replace('\xa0', '').strip()
         return {'question': example['question'], 'answer': example['answer']}
+    ds = ds.map(map_gsm8k, remove_columns=ds.column_names, load_from_cache_file=False)
     return ds, ans_type
 
 def load_code_contests():
     ds = load_dataset('deepmind/code_contests', split='train')
     ds = ds.filter(lambda ex: ex['difficulty']  == 7 and '<image>' not in ex['description']) # filter easy samples 
-    ds = ds.map(map_code_contests, remove_columns=ds.column_names, load_from_cache_file=False)
     ans_type = 'code'
     def map_code_contests(example):
         question = example['description']
@@ -132,6 +131,7 @@ def load_code_contests():
             'test_inputs': test_inputs,
             'test_outputs': test_outputs,
         }
+    ds = ds.map(map_code_contests, remove_columns=ds.column_names, load_from_cache_file=False)
     return ds, ans_type
 
 def load_livebench_language(subset):

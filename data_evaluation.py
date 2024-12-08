@@ -9,7 +9,7 @@ from conf import Config
 class EvalResults(utils.FromJSON):
     default_path = "runs/{}"
     def __init__(self, batch, gens, baseline, gens_stats, baseline_stats):
-        self.batch = batch
+        self.batch = batch.to_dict()
         self.gens = gens
         self.baseline = baseline
         self.gens_stats = gens_stats
@@ -38,7 +38,7 @@ class Eval():
                 for l in lines:
                     p = Prompt(json.loads(l), config.evoparams.prompt_params)
                     gen.append(p)
-                if fn == "stepbaseline.ndjson":
+                if fn == "baseline.ndjson":
                     baseline = gen.copy()
                 else:
                     generations.append(gen)
@@ -54,7 +54,7 @@ class Eval():
         gens_stats = [utils.seq_stats(gen_perf) for gen_perf in gens]
         baseline_stats = utils.seq_stats(baseline)
         results = EvalResults(self.test_data, gens, baseline, gens_stats, baseline_stats)
-        results.to_json(f"{self.config.ident}/eval_results")
+        results.to_json(f"{self.config.ident}/eval_results.json")
         self.plot(gens_stats, baseline_stats)
 
 
@@ -64,21 +64,25 @@ class Eval():
         data_len = len(gens)
         
         # gens
-        generations = range(1, data_len + 1) 
-        plt.plot(generations, baseline.mean, color=c1, linestyle='-', label=f'Generations mean', alpha=0.5)
-        plt.plot(generations, baseline.median, color=c1, linestyle='-.', label=f'Generations median', alpha=0.5)
-        plt.fill_between(data_len, baseline.min, baseline.max, color=c1, alpha=0.2)
+        gen_nums = range(1, data_len + 1) 
+        means = [g.mean for g in gens]
+        medians = [g.median for g in gens]
+        mins = [g.min for g in gens]
+        maxs = [g.max for g in gens]
+        plt.plot(gen_nums, means, color=c1, linestyle='-', label=f'Generations mean', alpha=0.5)
+        plt.plot(gen_nums, medians, color=c1, linestyle='-.', label=f'Generations median', alpha=0.5)
+        plt.fill_between(gen_nums, mins, maxs, color=c1, alpha=0.2)
 
         # baseline
         plt.axhline(baseline.mean, color=c2, linestyle='-', label=f'Baseline mean', alpha=0.5)
         plt.axhline(baseline.median, color=c2, linestyle='-.', label=f'Baseline median', alpha=0.5)
-        plt.fill_between(data_len, baseline.min, baseline.max, color=c2, alpha=0.2)
+        plt.fill_between(gen_nums, baseline.min, baseline.max, color=c2, alpha=0.2)
 
         plt.xlabel('Generation')
         plt.ylabel('Fitness')
         plt.title('Evolution progress')
         plt.legend()  
-        plt.savefig(f'runs/{self.config.ident}/plots/results.svg', format='svg')
+        plt.savefig(f'runs/{self.config.ident}/results.svg', format='svg')
 
 if __name__ == "__main__":
     pass # TODO: code eval for finished runs, only this file will be run

@@ -3,7 +3,7 @@ from typing import Callable, Literal
 from random import randint
 from datasets import Dataset
 import json
-import metaprompt
+from bert import bert
 from stats import stats
 
 
@@ -53,7 +53,7 @@ class Prompt():
             self.result = ["",""]
             self.id = randint(10000000, 99999999)
             self.parent_ids = []
-        self.bert_embedding = None
+        self.bert_embedding = bert.get_bert_embedding(str(self))
         self.maximum_similarity = 0
         self.average_similarity = 0
 
@@ -94,12 +94,12 @@ class Prompt():
         stats.append_to_current_step({"Fitness in training": self.fitness})
         return self.fitness
 
-    def copy(self) -> Prompt:
+    def copy(self, new_id=True) -> Prompt:
         new = Prompt([trait.copy() for trait in self.traits], self.params)
         new.generation_number = self.generation_number
         new.fitness = self.fitness
         new.best_fitness = self.best_fitness
-        new.id = randint(10000000, 99999999)
+        new.id = randint(10000000, 99999999) if new_id else self.id
         new.parent_ids = self.parent_ids
         return new
     
@@ -120,6 +120,6 @@ class Prompt():
             'average_similarity': float(self.average_similarity),
             'maximum_similarity': float(self.maximum_similarity)
         }
-        step_id = step if type(step) == str else f"step{step}"
+        step_id = step if type(step) == str else f"step{step:04}"
         with open(self.params.log_file.format(context=p_type, step_id=step_id), 'a') as f:
             f.write(json.dumps(log_entry) + '\n')

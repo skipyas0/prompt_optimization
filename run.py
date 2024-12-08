@@ -3,7 +3,6 @@ import data_evaluation as eval
 from evolutionary import EvolutionaryAlgorithm
 config = Config.from_args()
 EA = EvolutionaryAlgorithm(config)
-EA.populate()
 EA.run()
 
 if config.run_eval:
@@ -11,3 +10,5 @@ if config.run_eval:
     baselines = EA.random_baseline
     EV = eval.Eval(gens, baselines, config)
     EV.run()
+
+print(f"Finished run with ident\n{config.ident}")

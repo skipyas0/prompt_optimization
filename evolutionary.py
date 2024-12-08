@@ -51,20 +51,24 @@ class EvolutionaryAlgorithm():
         self.gen = config.model_api.generate
         self.tasks = config.task_toolkit.splits.train
         self.step = 0
+
     def run(self) -> None:
         """
         Run EvolutionaryAlgorithm to max iterations.
         """
-        for i in range(self.params.max_iters+1):
+        if self.config.continue_run:
+            self.load_population(self.config.ident)
+        else:
+            self.populate()
+
+        for i in range(self.params.max_iters):
             stats.start_step()
             t = time()
-            just_eval = i == self.params.max_iters
-            self.ga_step(just_eval)
+            self.ga_step()
             stats.add_to_current_step({
                 "Step duration": time() - t
             })
-            self.population_through_steps.append(self.population)
-            print(f"Step {i} complete")
+            print(f"Step {self.step} (this run: {i}) complete")
             self.step += 1
 
     def lamarck_baseline(self, eval_data, count: Optional[int] = None) -> tuple[float, float]:
@@ -92,20 +96,30 @@ class EvolutionaryAlgorithm():
             
     def load_population(self, ident) -> None:
         steps_path = f"runs/{ident}/steps"
-        files = list(sorted(os.listdir(steps_path), reverse=True))
-        if "stepbaseline.ndjson" in files:
-            files=files[1:]
-        for fn in files:
+        files = list(sorted(os.listdir(steps_path)))
+
+        # load baselines and add new ones to keep computation equivalent
+        with open(steps_path+"/baseline.ndjson", "r") as f:
+            self.random_baseline = [Prompt(json.loads(l), self.params.prompt_params)
+                                    for l in f.readlines()]
+        for _ in range(self.params.initial_population_size * self.params.max_iters):
+            self.random_baseline.append(self.create_prompt_lamarck())
+
+        added = False
+        for fn in files[1:]:
             with open(steps_path+f"/{fn}", "r") as f:
-                lines = f.readlines()
-                if len(lines) == self.params.initial_population_size:
-                    for l in lines:
-                        p = Prompt(json.loads(l), self.params.prompt_params)
-                        p.bert_embedding = bert.get_bert_embedding(str(p))
-                        self.population.append(p)
-                    self.step = int(fn.replace("step","").replace(".ndjson","")) + 1
-                    return
-        raise ValueError("This run does not have the same population size.")
+                this_step = [Prompt(json.loads(l), self.params.prompt_params) for l in f.readlines()]
+                print("loaded prompts from", fn)
+                if len(this_step) == self.params.initial_population_size:
+                    added = True
+                    self.population_through_steps.append(this_step)
+                    print("adding to pop steps")
+        if added and len(self.population_through_steps) > 0: 
+            self.step = len(self.population_through_steps)
+            print("starting from", self.step)
+            self.population = [p.copy(new_id=False) for p in self.population_through_steps[-1]]
+        else:
+            raise IndexError(f"Error when loading pop through steps {added=}, {len(self.population_through_steps)=}")
 
     def repopulate(self) -> None:
         #print(f"in repopulate, will add {self.params.mating_pool_size - self.pop_size}")
@@ -117,7 +131,7 @@ class EvolutionaryAlgorithm():
     def random_cot_prompt(self) -> Prompt:
         t = Trait(random.choice(seed.cot_prompts))
         res = Prompt([t], self.params.prompt_params)
-        res.bert_embedding = bert.get_bert_embedding(str(res))
+        #res.bert_embedding = bert.get_bert_embedding(str(res))
         return res
     
     def create_prompt_lamarck(self) -> Prompt:
@@ -145,7 +159,7 @@ class EvolutionaryAlgorithm():
             )
 
         res = Prompt(traits, self.params.prompt_params)
-        res.bert_embedding = bert.get_bert_embedding(str(res))
+        #_embedding(str(res))
 
         stats.add_to_current_step({"New prompt generation": 1})
         return res
@@ -158,16 +172,14 @@ class EvolutionaryAlgorithm():
         res = template.copy()
         self.mutate(res)
         res.parent_ids = [template.id]
-        res.bert_embedding = bert.get_bert_embedding(str(res))
+        #res.bert_embedding = bert.get_bert_embedding(str(res))
         return res
 
-    def ga_step(self, just_eval=False) -> None:
+    def ga_step(self) -> None:
         """
         One step of Genetic Algorithm.
         """
         self.mating_pool = self.selection()
-        if just_eval:
-            return
         
         # GA crossover procedure
         lotto = range(self.params.mating_pool_size)
@@ -182,7 +194,7 @@ class EvolutionaryAlgorithm():
                 # Crossover and mutation happen separately
                 self.mutate(res)
 
-            res.bert_embedding = bert.get_bert_embedding(str(res))
+            #res.bert_embedding = bert.get_bert_embedding(str(res))
             offsprings.append(res)
 
         self.population = offsprings
@@ -205,6 +217,9 @@ class EvolutionaryAlgorithm():
         self.repopulate()
 
         selection_function = sm.sm_dict[self.params.selection_mode]
+        self.population_through_steps.append(
+            [p.copy(new_id=False) for p in self.population]
+        )
         return selection_function(self.population, self.params)
     
     def mutate_group(self, to_be_mutated: list[Prompt]) -> None:

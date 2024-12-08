@@ -1,0 +1,10 @@
+{
+    "dataset": "openai/gsm8k",
+    "split_lengths": [
+        5, 200, 5
+    ],
+    "metaprompt_set": "empty",
+    "ans_type": "numeric",
+    "formatting_suffix": "",
+    "scorer": "binary_match"
+}
