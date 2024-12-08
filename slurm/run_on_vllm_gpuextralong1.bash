@@ -15,8 +15,17 @@ export PYTORCH_CUDA_ALLOC_CONF="expandable_segments:True"
 export VLLM_MY_PORT=$(shuf -i8000-8999 -n1)
 echo "VLLM_MY_PORT=${VLLM_MY_PORT}"
 
+for i in "$@"; do
+  if [[ $i == "--conf" ]]; then
+    # collect the following arguments
+    config_args=("${@:2:3}")
+    model=${config_args[2]}
+    break
+  fi
+done
+
 export VLLM_LOG="/home/kloudvoj/devel/prompt_optimization/logs/vllm-api.$SLURM_JOB_ID.vllm_server.out"
-nohup /home/kloudvoj/devel/prompt_optimization/slurm/vllm-serve.bash $1 2>&1 > "$VLLM_LOG" &
+nohup /home/kloudvoj/devel/prompt_optimization/slurm/vllm-serve.bash $model 2>&1 > "$VLLM_LOG" &
 
 # Wait for VLLM server startup
 check_substring() {
@@ -29,4 +38,4 @@ done
 
 # Now run code which uses the server
 export PYTHONPATH=.:$PYTHONPATH
-python /home/kloudvoj/devel/prompt_optimization/run.py $*
+python /home/kloudvoj/devel/prompt_optimization/run.py "$@"

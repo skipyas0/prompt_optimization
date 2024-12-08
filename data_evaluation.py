@@ -44,13 +44,13 @@ class Eval():
                     generations.append(gen)
         return Eval(generations, baseline, config)
 
-    def performance_stats(self) -> tuple[list[list[float]], list[float]] :
+    def get_fitness_data(self) -> tuple[list[list[float]], list[float]] :
         gen_perfs = [[p.calculate_fitness(self.test_data) for p in g] for g in self.generations]
         baseline_perfs = [p.calculate_fitness(self.test_data) for p in self.baseline]
         return gen_perfs, baseline_perfs    
     
     def run(self):
-        gens, baseline = self.performance_stats()
+        gens, baseline = self.get_fitness_data()
         gens_stats = [utils.seq_stats(gen_perf) for gen_perf in gens]
         baseline_stats = utils.seq_stats(baseline)
         results = EvalResults(self.test_data, gens, baseline, gens_stats, baseline_stats)

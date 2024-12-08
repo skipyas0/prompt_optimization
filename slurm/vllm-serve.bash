@@ -5,6 +5,7 @@ export NUM_GPUS=$(echo $CUDA_VISIBLE_DEVICES | tr ',' '\n' | wc -l)
 echo "NUM_GPUS=${NUM_GPUS}"
 echo "VLLM_MY_PORT=${VLLM_MY_PORT}"
 MODEL_NAME="$1"
+echo "MODEL_NAME=${MODEL_NAME}"
 source /home/kloudvoj/devel/prompt_optimization/slurm/init_environment_vllm_amd.sh
 case "${MODEL_NAME}" in
     "llama-3.1-70b")

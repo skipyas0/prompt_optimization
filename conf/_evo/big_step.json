@@ -1,0 +1,8 @@
+{
+    "initial_population_size": 20,
+    "mating_pool_size": 10,
+    "max_iters": 1,
+    "selection_mode": "roulette",
+    "similarity_th": 0.95,
+    "train_batch_size": 10
+}
