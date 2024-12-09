@@ -1,0 +1,26 @@
+{
+    "metaprompts": {
+      "instructions": {
+        "text": "{metapersona}Your mission is to generate instructions for a generic task given a few examples of input/output pairs.\n<examples>\n{examples}\n</examples>\nSubstitute the <-INS-> tag with your generated instructions. \nPay attention to the tag's location in the example.\nDo NOT refer to the examples in your answer! Your generated instructions will be used to aid with different examples.\nTry to be as concise as possible.\n{length}{metastyle}Generated instructions:",
+        "type": "trait",
+        "format_ids": ["metapersona", "examples", "length", "metastyle"]
+      },
+      "crossover": {
+        "text": "Below you will find two sequences with similar meanings. \nYour task is to take ideas from both sequences and paraphrase them, so that you add novelty.\nAvoid using the same words as in the original sequences.\n\n<sequence1>\n{sequence1}\n</sequence1>\n\n<sequence2>\n{sequence2}\n</sequence2>\n{metastyle}Resulting Sequence:",
+        "type": "evo",
+        "format_ids": ["sequence1", "sequence2", "metastyle"]
+      },
+      "solve": {
+        "text": "{preamble}{prefix_instructions}    \n    <task>\n    {task}\n    </task>\n    {suffix_instructions}{universal_suffix}",
+        "type": "solve",
+        "format_ids": ["preamble", "prefix_instructions", "task", "suffix_instructions", "universal_suffix"]
+      }
+    },
+    
+    "settings": {
+      "metapersonas": false,
+      "metastyles": false,
+      "points_range": [1, 1],
+      "sentences_per_point_range": [3, 6]
+    }
+  }

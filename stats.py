@@ -1,4 +1,8 @@
 from json import dump
+import itertools
+import matplotlib.pyplot as plt
+import os
+
 class Stats(dict):
     """
     Wrapper around dict to make keeping statistics through multiple steps easier.
@@ -6,12 +10,14 @@ class Stats(dict):
     """
     def add_to_current_step(self, new_stats: dict[str, int | float]) -> None:
         for stat, new_value in new_stats.items(): 
+            print("{stat}: {new_value}")
             if stat not in self.keys():
                 self[stat] = [0]
             self[stat][-1] += new_value
 
     def append_to_current_step(self, new_stats: dict[str, int | float]) -> None:
         for stat, new_value in new_stats.items(): 
+            print("{stat}: {new_value}")
             if stat not in self.keys():
                 self[stat] = [[]]
             self[stat][-1].append(new_value)
@@ -47,28 +53,31 @@ class Stats(dict):
             if type(value[0]) != list
         }
     
-    def dump(self, ident: str) -> None:
-        with open(f"runs/{ident}/stats.json", 'w') as f:
-            dump(self, f, indent=4)
+    def save(self, ident: str) -> None:
+        i=1
+        while os.path.exists("runs/{ident}/stats{i}.json"):
+            i+1
+
+        with open(f"runs/{ident}/stats{i}.json", 'w') as f:
+            dump(self.get_averages, f, indent=4)
+        self.plot_training_stats(ident, i)
+
+    def plot_training_stats(self, ident: str, run_num: int) -> None:
+        color_cycle = itertools.cycle(plt.cm.get_cmap('tab10').colors)
+    
+        for name, values in self.get_averages().items():
+            if type(values) != list:
+                continue
+            plt.figure()
+            color = next(color_cycle)
+            generations = range(1, len(values) + 1) 
+            plt.plot(generations, values, label=name, color=color)
+    
+            plt.ylabel(f'{name}')
+            plt.xlabel('Step')
+            plt.title(f'Progress of {name.lower()} in training')
+            
+            plt.legend()
+            plt.savefig(f'runs/{ident}/plots/{name.lower().replace(" ", "_")}{run_num}.svg', format='svg')
     
 stats = Stats()
-
-""" TODO
-def plot_training_stats(ident: str) -> None:
-    color_cycle = itertools.cycle(plt.cm.get_cmap('tab10').colors)
-
-    for name, values in stats.get_averages().items():
-        if type(values) != list:
-            continue
-        plt.figure()
-        color = next(color_cycle)
-        generations = range(1, len(values) + 1) 
-        plt.plot(generations, values, label=name, color=color)
-
-        plt.ylabel(f'{name}')
-        plt.xlabel('Step')
-        plt.title(f'Progress of {name.lower()} in training')
-        
-        plt.legend()
-        plt.savefig(f'runs/{ident}/plots/{name.lower().replace(" ", "_")}.svg', format='svg')
-"""

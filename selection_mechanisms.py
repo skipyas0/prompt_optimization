@@ -1,5 +1,4 @@
 from prompt import Prompt
-
 from random import sample, random
 from stats import stats
 import bisect

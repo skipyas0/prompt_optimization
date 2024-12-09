@@ -1,6 +1,6 @@
 from __future__ import annotations
 import utils
-from prompt import Prompt, PromptParams, Trait
+from prompt import Prompt
 import matplotlib.pyplot as plt
 import os
 import json

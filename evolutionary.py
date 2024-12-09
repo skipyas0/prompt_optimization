@@ -1,11 +1,10 @@
 from __future__ import annotations
 from utils import FromJSON, join_dataset_to_str
 import random
-from typing import Literal, Callable, Optional
+from typing import Literal, Optional
 from prompt import Prompt, PromptParams, Trait
 import prompt_seed_phrases as seed
 import selection_mechanisms as sm
-from bert import bert
 from stats import stats
 from time import time
 import os
@@ -70,16 +69,6 @@ class EvolutionaryAlgorithm():
             })
             print(f"Step {self.step} (this run: {i}) complete")
             self.step += 1
-
-    def lamarck_baseline(self, eval_data, count: Optional[int] = None) -> tuple[float, float]:
-        """
-        Represents the result if computation used for evolution was instead used to generate more initial prompts.
-        Returns the max and mean score.
-        """
-        c = count if count else self.params.initial_population_size * self.params.max_iters
-        prompts = [self.create_prompt_lamarck() for _ in range(c)]
-        scores = [p.calculate_fitness(eval_data) for p in prompts]
-        return (max(scores), sum(scores)/len(scores))
     
     def populate(self) -> None:
         """
@@ -122,17 +111,11 @@ class EvolutionaryAlgorithm():
             raise IndexError(f"Error when loading pop through steps {added=}, {len(self.population_through_steps)=}")
 
     def repopulate(self) -> None:
-        #print(f"in repopulate, will add {self.params.mating_pool_size - self.pop_size}")
         new_prompts = []
         for _ in range(self.params.mating_pool_size - self.pop_size):
             new_prompts.append(self.create_prompt_lamarck())
         self.population += new_prompts
 
-    def random_cot_prompt(self) -> Prompt:
-        t = Trait(random.choice(seed.cot_prompts))
-        res = Prompt([t], self.params.prompt_params)
-        #res.bert_embedding = bert.get_bert_embedding(str(res))
-        return res
     
     def create_prompt_lamarck(self) -> Prompt:
         """
@@ -159,22 +142,9 @@ class EvolutionaryAlgorithm():
             )
 
         res = Prompt(traits, self.params.prompt_params)
-        #_embedding(str(res))
-
         stats.add_to_current_step({"New prompt generation": 1})
         return res
     
-    def create_prompt_mutate_from_template(self, template: Prompt) -> Prompt:
-        """
-        Construct a new prompt by applying the mutation operator on a given template prompt.
-        """
-
-        res = template.copy()
-        self.mutate(res)
-        res.parent_ids = [template.id]
-        #res.bert_embedding = bert.get_bert_embedding(str(res))
-        return res
-
     def ga_step(self) -> None:
         """
         One step of Genetic Algorithm.
@@ -194,7 +164,6 @@ class EvolutionaryAlgorithm():
                 # Crossover and mutation happen separately
                 self.mutate(res)
 
-            #res.bert_embedding = bert.get_bert_embedding(str(res))
             offsprings.append(res)
 
         self.population = offsprings
@@ -222,13 +191,7 @@ class EvolutionaryAlgorithm():
         )
         return selection_function(self.population, self.params)
     
-    def mutate_group(self, to_be_mutated: list[Prompt]) -> None:
-        """
-        In-place mutation of given prompts.
-        """
-        for prompt in to_be_mutated:
-            self.mutate(prompt)
-    
+
     def mutate(self, prompt: Prompt) -> None:
         """
         In-place mutation of prompt trait-by-trait.

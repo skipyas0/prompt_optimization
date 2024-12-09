@@ -1,6 +1,5 @@
 from __future__ import annotations
 import re
-import json
 from datasets import Dataset, load_dataset, Value
 from fitness_functions import ff_dict
 from utils import FromJSON

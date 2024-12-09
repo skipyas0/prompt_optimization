@@ -3,8 +3,6 @@ import re
 import json
 from typing import Literal, Type, TypeVar
 import random 
-import shutil
-import os
 import io
 from contextlib import redirect_stdout
 import numpy as np
@@ -14,16 +12,6 @@ def scramble(input: str, *_, **__) -> str:
     char_list = list(input)
     random.shuffle(char_list)
     return ''.join(char_list)
-
-def load_log_dict(path: str) -> list[dict]:
-    """
-    Open .ndjson and load it as list of dicts
-    """
-    data = []
-    with open(path, 'r') as file:
-        for line in file:
-            data.append(json.loads(line))  # Convert each line to a dictionary
-    return data
 
 def my_exec(input_data, code, queue):
     f = io.StringIO()
@@ -63,24 +51,6 @@ def parse_answer(text: str) -> str:
 
     return matches
 
-def find_key_by_value(d, x):
-    for key, value in d.items():
-        if value == x:
-            return key
-    return None  
-
-def copy_contents(source_folder, dest_folder):
-    if not os.path.exists(dest_folder):
-        raise NotADirectoryError(f"Check if the run number {dest_folder.split('/')[1]} has a directory")
-    for item in os.listdir(source_folder):
-        source_path = os.path.join(source_folder, item)
-        destination_path = os.path.join(dest_folder, item)
-        
-        # Check if it's a directory and copy accordingly
-        if os.path.isdir(source_path):
-            shutil.copytree(source_path, destination_path, dirs_exist_ok=True)  # dirs_exist_ok=True will overwrite if exists
-        else:
-            shutil.copy2(source_path, destination_path)
 
 stats = namedtuple("Stats", ["mean", "median", "min", "max"])
 def seq_stats(data: list[float]):
@@ -104,30 +74,6 @@ class DotDict(dict):
         d = dict()
         d.update(self)
         return d
-    
-def log_usage(log_file: str, input: str | tuple[str, str], output: str | float) -> None:
-    """
-    Add entry about handle usage to log file.
-    """
-    if log_file:
-        if type(output) == str:
-            log_entry = {
-                'type': "usage",
-                'in': input,
-                'out': output,
-            }
-        else:
-            log_entry = {
-                'type': "score",
-                'ground': f"[[{input[0]}]]",
-                'in': input[1],
-                'out': output,
-            }
-    
-        with open(log_file, 'a') as f:
-            f.write(json.dumps(log_entry) + '\n')
-    else:
-        print("WARNING: log_usage has non_existent file path")
 
 T = TypeVar('T', bound='FromJSON')
 class FromJSON:
