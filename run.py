@@ -13,7 +13,7 @@ t1 = time()
 
 EA.run()
 
-t2=time()
+t2 = time()
 
 if config.run_eval:
     gens = EA.population_through_steps
@@ -31,4 +31,4 @@ stats.set_const_stat({
 })
 
 stats.save(config.ident)
-print(f"Finished run with ident\n{config.ident}")
+print(f"Finished run with ident\n{config.ident}\nafter {round((t3-t0)//60)}m{round((t3-t0)%60)}s")

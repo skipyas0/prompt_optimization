@@ -112,7 +112,7 @@ class EvolutionaryAlgorithm():
 
     def repopulate(self) -> None:
         new_prompts = []
-        for _ in range(self.params.mating_pool_size - self.pop_size):
+        for _ in range(self.params.initial_population_size - self.pop_size):
             new_prompts.append(self.create_prompt_lamarck())
         self.population += new_prompts
 
@@ -149,6 +149,10 @@ class EvolutionaryAlgorithm():
         """
         One step of Genetic Algorithm.
         """
+        self.deduplicate()
+        self.score_prompts()
+        self.population_through_steps.append([p.copy(new_id=False) for p in self.population])
+        print(f"just added a step with {len(self.population_through_steps[-1])} prompts")
         self.mating_pool = self.selection()
         
         # GA crossover procedure
@@ -168,12 +172,7 @@ class EvolutionaryAlgorithm():
 
         self.population = offsprings
 
-
-   
-    def selection(self) -> list[Prompt]:
-        """
-        Perform given selection type to get new mating pool.
-        """
+    def score_prompts(self) -> None:
         task_batch_ix = random.sample(range(len(self.tasks)), self.params.train_batch_size)
         task_batch = self.tasks.select(task_batch_ix)
         
@@ -181,14 +180,17 @@ class EvolutionaryAlgorithm():
             s.calculate_fitness(task_batch)
             s.log(self.step)
 
+    def deduplicate(self) -> None:
         # apply bert deduplication before fitness based selection
         self.population = sm.filter_similar(self.population, self.params)
         self.repopulate()
 
+    def selection(self) -> list[Prompt]:
+        """
+        Perform given selection type to get new mating pool.
+        """        
+
         selection_function = sm.sm_dict[self.params.selection_mode]
-        self.population_through_steps.append(
-            [p.copy(new_id=False) for p in self.population]
-        )
         return selection_function(self.population, self.params)
     
 

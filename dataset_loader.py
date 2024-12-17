@@ -117,7 +117,7 @@ def load_gsm8k():
     return ds, ans_type
 
 def load_code_contests():
-    ds = load_dataset('deepmind/code_contests', split='train')
+    ds = load_dataset('deepmind/code_contests', split='train').select(range(500))
     ds = ds.filter(lambda ex: ex['difficulty']  == 7 and '<image>' not in ex['description']) # filter easy samples 
     ans_type = 'code'
     def map_code_contests(example):

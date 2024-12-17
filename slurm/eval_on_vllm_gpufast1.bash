@@ -31,4 +31,4 @@ done
 
 # Now run code which uses the server
 export PYTHONPATH=.:$PYTHONPATH
-python /home/kloudvoj/devel/prompt_optimization/run.py $*
+python /home/kloudvoj/devel/prompt_optimization/data_evaluation.py $*

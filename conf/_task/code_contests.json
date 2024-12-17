@@ -1,0 +1,10 @@
+{
+    "dataset": "deepmind/code_contests",
+    "split_lengths": [
+        3, 80, 8
+    ],
+    "metaprompt_set": "code",
+    "ans_type": "code",
+    "formatting_suffix": "Only output runnable python3 code without any headings or formatting.",
+    "scorer": "run_code"
+}

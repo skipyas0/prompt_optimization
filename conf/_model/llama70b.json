@@ -1,0 +1,5 @@
+{
+    "model":"hugging-quants/Meta-Llama-3.1-70B-Instruct-AWQ-INT4",
+    "meta_temp": 0.75,
+    "sol_temp": 0.0
+}

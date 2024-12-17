@@ -22,7 +22,7 @@ def my_exec(input_data, code, queue):
     # Send the captured output back to the main process
     queue.put(f.getvalue().strip())
 
-def join_dataset_to_str(dataset: Dataset, insertion_token: str = "<-INS->\n", insertion_position: Literal["prefix", "suffix"] = "prefix") -> list[str]:   
+def join_dataset_to_str(dataset: Dataset, insertion_token: str = "", insertion_position: Literal["prefix", "suffix"] = "prefix") -> list[str]:   
     """
     Modify samples with <in> <out> html-like tags
     """
@@ -51,7 +51,30 @@ def parse_answer(text: str) -> str:
 
     return matches
 
-
+def log_usage(log_file: str, input: str | tuple[str, str], output: str | float) -> None:
+    """
+    Add entry about handle usage to log file.
+    """
+    if log_file:
+        if type(output) == str:
+            log_entry = {
+                'type': "usage",
+                'in': input,
+                'out': output,
+            }
+        else:
+            log_entry = {
+                'type': "score",
+                'ground': input[0],
+                'in': input[1],
+                'out': output,
+            }
+    
+        with open(log_file, 'a') as f:
+            f.write(json.dumps(log_entry) + '\n')
+    else:
+        print("WARNING: log_usage has non_existent file path")
+        
 stats = namedtuple("Stats", ["mean", "median", "min", "max"])
 def seq_stats(data: list[float]):
     mean = np.mean(data)

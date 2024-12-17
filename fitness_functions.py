@@ -5,7 +5,8 @@ import os
 
 def logging_wrapper(test_sample, answer, func = None) -> float:
     out = func(test_sample, answer)
-    utils.log_usage(os.getenv("CALL_LOG_FILE"), (test_sample["answer"], answer), out)
+    ground = test_sample["answer"] if "answer" in test_sample.keys() else ""
+    utils.log_usage(os.getenv("CALL_LOG_FILE"), (ground, answer), out)
     return out
 
 

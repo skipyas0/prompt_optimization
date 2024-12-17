@@ -5,6 +5,6 @@
     ],
     "metaprompt_set": "gsm8k",
     "ans_type": "numeric",
-    "formatting_suffix": "After your explanation give your answer as a numeric value in two pairs of square brackets.\n<example>\nEXPLANATION\n[[ANSWER]]\n</example>",
+    "formatting_suffix": "",
     "scorer": "binary_match"
 }

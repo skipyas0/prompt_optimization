@@ -6,7 +6,7 @@
 #SBATCH --job-name evoprompt-run
 #SBATCH --mail-user=kloudvoj@fel.cvut.cz
 
-source "/home/kloudvoj/devel/universal_scripts/init_environment_vllm_amd.sh"
+source "/home/kloudvoj/devel/prompt_optimization/slurm/init_environment_vllm_amd.sh"
 
 # First run the VLLM server, so we can use OpenAI API
 # output redirection however does not work well...

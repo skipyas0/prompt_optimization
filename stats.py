@@ -10,14 +10,14 @@ class Stats(dict):
     """
     def add_to_current_step(self, new_stats: dict[str, int | float]) -> None:
         for stat, new_value in new_stats.items(): 
-            print("{stat}: {new_value}")
+            #print("{stat}: {new_value}")
             if stat not in self.keys():
                 self[stat] = [0]
             self[stat][-1] += new_value
 
     def append_to_current_step(self, new_stats: dict[str, int | float]) -> None:
         for stat, new_value in new_stats.items(): 
-            print("{stat}: {new_value}")
+            #print("{stat}: {new_value}")
             if stat not in self.keys():
                 self[stat] = [[]]
             self[stat][-1].append(new_value)
@@ -42,7 +42,7 @@ class Stats(dict):
 
     def get_averages(self) -> dict[str, list[int|float]|int|float]:
         return {
-            stat: [sum(sublist) / len(sublist) for sublist in value] if type(value[0]) == list else value
+            stat: value if type(value) != list else [sum(sublist) / len(sublist) for sublist in value] if type(value[0]) == list else value
             for stat, value in self.items() 
         }
     
@@ -59,7 +59,7 @@ class Stats(dict):
             i+1
 
         with open(f"runs/{ident}/stats{i}.json", 'w') as f:
-            dump(self.get_averages, f, indent=4)
+            dump(self.get_averages(), f, indent=4)
         self.plot_training_stats(ident, i)
 
     def plot_training_stats(self, ident: str, run_num: int) -> None:

@@ -1,0 +1,5 @@
+{
+    "model":"mistralai/Mistral-Nemo-Instruct-2407",
+    "meta_temp": 0.75,
+    "sol_temp": 0.0
+}

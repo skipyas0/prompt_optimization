@@ -34,14 +34,7 @@ Metaprompt set from 'conf/_meta' is specified in the dataset conf file for each 
  
 ## Tested datasets 📚
 - openai/gsm8k
-- microsoft/orca-math-word-problems-200k
 - maveriq/bigbenchhard
 - cais/mmlu
 - deepmind/code_contests
 - livebench
-
-## Conventions
-- Utilize HTML-like tags where possible
-- When instructing LLM to fill in the blank, use <-INS-> 'token'
-- Formatting brackets in metaprompts are designated
-- Prompt is an specimen in the EA and an object. Metaprompts are manually written instructions for the LLM on how to manipulate prompts.

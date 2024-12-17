@@ -3,6 +3,7 @@ model=""
 # parse arguments
 for i in "$@"; do
   if [[ $i == "--conf" ]]; then
+    config_args=("${@:2:3}")
     model=${config_args[2]}
     break
   elif [[ $i == "--ident" ]]; then

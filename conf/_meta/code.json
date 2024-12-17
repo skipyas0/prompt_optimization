@@ -1,0 +1,26 @@
+{
+  "metaprompts": {
+    "instructions": {
+      "text": "{metapersona}Your mission is to generate an instruction for a coder language model which will solve programming contest questions.\n<examples>\n{examples}\n</examples>\n{length}{metastyle} Only output the instruction prompt without formatting or headings. Generated instruction prompt:",
+      "type": "trait",
+      "format_ids": ["metapersona", "examples", "length", "metastyle"]
+    },
+    "crossover": {
+      "text": "Below you will find two instruction prompts that were used to instruct an LLM through solving coding problems.\nYour task is to draw inspiration from both and try to create a similar but better instruction prompt.\n Avoid using the same words as in the original sequences, try to add novelty.\n\n<sequence1>\n{sequence1}\n</sequence1>\n\n<sequence2>\n{sequence2}\n</sequence2>\n{metastyle}Only output your improved instruction prompt, no additional formatting or heading.\nGenerated instructions:",
+      "type": "evo",
+      "format_ids": ["sequence1", "sequence2", "metastyle"]
+    },
+    "solve": {
+      "text": "{preamble}{prefix_instructions}\n<task>\n{task}\n</task>\n{suffix_instructions}{universal_suffix}",
+      "type": "solve",
+      "format_ids": ["preamble", "prefix_instructions", "task", "suffix_instructions", "universal_suffix"]
+    }
+  },
+  
+  "settings": {
+    "metapersonas": false,
+    "metastyles": false,
+    "points_range": [1, 1],
+    "sentences_per_point_range": [3, 6]
+  }
+}
