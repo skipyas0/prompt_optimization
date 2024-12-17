@@ -3,7 +3,6 @@
     "split_lengths": [
         5, 70, 5
     ],
-    "metaprompt_set": "typos",
     "ans_type": "text",
     "formatting_suffix": "",
     "scorer": "rouge_diff"

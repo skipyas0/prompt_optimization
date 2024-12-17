@@ -24,12 +24,12 @@ class Trait:
         )
 
 class PromptParams():
-    def __init__(self, usage_handle: Callable[[str], str], log_file: str, task_toolkit) -> None:
-        self.usage_handle = usage_handle
-        self.evaluation_handle = task_toolkit.scoring_function
-        self.log_file = log_file
-        self.metaprompt = task_toolkit.metaprompt_set.solve
-        self.format_enforment_suffix = task_toolkit.formatting_suffix
+    def __init__(self, conf) -> None:
+        self.usage_handle = conf.model_api.solve
+        self.evaluation_handle = conf.task_toolkit.scoring_function
+        self.log_file = conf.run_path + "{context}/{step_id}.ndjson"
+        self.metaprompt = conf.metaprompt_set.get("solve")
+        self.format_enforment_suffix = conf.task_toolkit.formatting_suffix
         
 class Prompt():
     def __init__(self, traits: list[Trait] | dict, params: PromptParams) -> None: 

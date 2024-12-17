@@ -11,7 +11,6 @@ class TaskToolkit(FromJSON):
     def __init__(self, 
                  dataset: str, 
                  split_lengths: tuple[int, int,int], 
-                 metaprompt_set: str, 
                  ans_type: str,
                  formatting_suffix: str, 
                  scorer: str,
@@ -22,11 +21,9 @@ class TaskToolkit(FromJSON):
         """
         self.dataset_name = dataset
         self.split_lengths = split_lengths
-        self.metaprompt_set_name = metaprompt_set
         self.ans_type = ans_type
         self.formatting_suffix = formatting_suffix
         self.scorer = scorer
-        self.metaprompt_set = MetapromptSet.from_json(metaprompt_set)
         self.name = name
 
         if self.dataset_name == 'openai/gsm8k':

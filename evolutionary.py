@@ -45,7 +45,7 @@ class EvolutionaryAlgorithm():
         self.population_through_steps: list[list[Prompt]] = []
         self.params = config.evoparams
         self.target_pop_size = self.params.initial_population_size
-        self.metaprompts = config.task_toolkit.metaprompt_set
+        self.metaprompts = config.metaprompt_set
         self.trait_ids = list(self.metaprompts.keys())
         self.gen = config.model_api.generate
         self.tasks = config.task_toolkit.splits.train
@@ -126,7 +126,7 @@ class EvolutionaryAlgorithm():
             return join_dataset_to_str(examples)
 
         traits = []
-        for trait_metaprompt in self.metaprompts.traits:
+        for trait_metaprompt in self.metaprompts.trait_metaprompts:
             trait_text = self.gen(
                 trait_metaprompt.format({
                 "metapersona": self.metapersona,
@@ -202,7 +202,7 @@ class EvolutionaryAlgorithm():
         for ix, trait in enumerate(prompt.traits):
             if trait.evolved:
                 prompt.traits[ix].text = self.gen(
-                    self.metaprompts.mutation.format({
+                    self.metaprompts.get("mutation").format({
                         "sequence": trait,
                         "metastyle": self.metastyle
                     })
@@ -221,7 +221,7 @@ class EvolutionaryAlgorithm():
                 t1, t2 = res.traits[ix], prompt2.traits[ix]
 
                 res.traits[ix].text = self.gen(
-                    self.metaprompts.crossover.format({
+                    self.metaprompts.get("crossover").format({
                         "sequence1": t1,
                         "sequence2": t2,
                         "metastyle": self.metastyle
@@ -235,11 +235,11 @@ class EvolutionaryAlgorithm():
     @property
     def metapersona(self) -> str:
         personas = seed.manager_personas if random.random() < 0.5 else seed.solver_personas
-        return random.choice(personas) if self.config.task_toolkit.metaprompt_set.settings["metapersonas"] else ""
+        return random.choice(personas) if self.config.metaprompt_set.settings["metapersonas"] else ""
     
     @property
     def metastyle(self) -> str:    
-        return random.choice(seed.wording_styles) if self.config.task_toolkit.metaprompt_set.settings["metastyles"] else ""
+        return random.choice(seed.wording_styles) if self.config.metaprompt_set.settings["metastyles"] else ""
 
     @property
     def pop_size(self) -> int:
